@@ -68,6 +68,7 @@ Password for every account: `LearnLoop!2026`. `admin@learnloop.dev`, `teacher1@l
 - Docs: README, SECURITY.md, AI-WORKFLOW.md, ADR-001..003
 - Browser walkthrough done for admin (users, audit verify), student (resume, answer, progress charts),
   and teacher (class dashboard). **Not verified:** mobile width in a real browser (window resize did not apply).
+- Git: repo initialised on `main` with 13 logical commits (nothing pushed; no remote yet).
 - `deepmerge-ts` overridden to ^8 in the root package.json to clear a Prisma high-severity advisory.
 
 ## Next steps
