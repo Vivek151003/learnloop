@@ -1,0 +1,10 @@
+{
+  "name": "@learnloop/mcp-server",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "MCP server exposing LearnLoop tools to AI clients (built in Week 3, SRS section 5.2)",
+  "scripts": {
+    "start": "node src/index.js"
+  }
+}
