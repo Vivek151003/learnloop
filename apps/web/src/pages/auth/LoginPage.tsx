@@ -47,19 +47,19 @@ export function LoginPage() {
 
   return (
     <AuthShell
-      title="Welcome back"
-      subtitle="Log in to keep your practice streak going."
+      title="Log in"
+      subtitle="Pick up where you left off."
       footer={
         <>
-          New here?{' '}
-          <Link className="font-medium text-brand-700 hover:underline" to="/register">
-            Create an account
+          No account yet?{' '}
+          <Link className="link" to="/register">
+            Create one
           </Link>
         </>
       }
     >
       <form className="space-y-4" onSubmit={onSubmit} noValidate>
-        {error && <Alert tone="danger">{error}</Alert>}
+        {error && <Alert tone="wrong">{error}</Alert>}
         <Input
           label="Email"
           type="email"
@@ -76,8 +76,8 @@ export function LoginPage() {
           onChange={(e) => setPassword(e.target.value)}
           required
         />
-        <div className="flex justify-end">
-          <Link to="/forgot-password" className="text-sm text-brand-700 hover:underline">
+        <div className="-mt-1 flex justify-end">
+          <Link to="/forgot-password" className="link text-sm">
             Forgot password?
           </Link>
         </div>
@@ -85,11 +85,9 @@ export function LoginPage() {
           Log in
         </Button>
       </form>
-      <div className="mt-6 border-t border-line pt-5">
-        <p className="text-xs font-medium uppercase tracking-wide text-ink-faint">
-          Try a demo account
-        </p>
-        <div className="mt-2 grid grid-cols-3 gap-2">
+      <div className="mt-8 border-t border-rule pt-6">
+        <p className="eyebrow">Or look around as</p>
+        <div className="mt-3 grid grid-cols-3 gap-2">
           {DEMO.map((d) => (
             <Button
               key={d.role}

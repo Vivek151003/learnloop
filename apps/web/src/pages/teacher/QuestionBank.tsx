@@ -9,9 +9,7 @@ import {
 } from '@learnloop/shared';
 import {
   Alert,
-  Badge,
   Button,
-  Card,
   EmptyState,
   ErrorState,
   Input,
@@ -19,16 +17,20 @@ import {
   Modal,
   PageHeader,
   Pager,
+  Panel,
   Select,
+  Status,
   TableWrap,
+  Tag,
   Td,
+  TextArea,
   Th,
 } from '../../components/ui';
 import { ApiRequestError, api, errorMessage, qs } from '../../lib/api';
 import { useUser } from '../../lib/auth';
 import { DIFFICULTY_LABELS } from '../../lib/format';
 
-const STATUS_TONE = { approved: 'success', draft: 'warn', retired: 'neutral' } as const;
+const STATUS_TONE = { approved: 'right', draft: 'pencil', retired: 'neutral' } as const;
 
 /** FR-30..FR-32: browse, search, filter, add and approve questions. */
 export default function QuestionBank() {
@@ -65,131 +67,132 @@ export default function QuestionBank() {
     setFilters((f) => ({ ...f, [k]: e.target.value }));
     setPage(1);
   };
+  const filtered = Boolean(filters.topicId || filters.difficulty || filters.status || filters.q);
 
   return (
     <>
       <PageHeader
+        eyebrow="Teaching"
         title="Question bank"
-        subtitle="AI-generated questions stay in draft until a teacher approves them."
+        subtitle="Only approved questions are served to students. AI-written questions arrive as drafts."
         actions={
           user.role === 'teacher' && <Button onClick={() => setAdding(true)}>Add question</Button>
         }
       />
-      <Card>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <Input
-            label="Search"
-            type="search"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Words in the question"
+
+      <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))]">
+        <Input
+          label="Search"
+          type="search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Words in the question"
+        />
+        <Select label="Topic" value={filters.topicId} onChange={setFilter('topicId')}>
+          <option value="">All topics</option>
+          {topics.data?.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.name}
+            </option>
+          ))}
+        </Select>
+        <Select label="Level" value={filters.difficulty} onChange={setFilter('difficulty')}>
+          <option value="">Any</option>
+          {[1, 2, 3, 4, 5].map((d) => (
+            <option key={d} value={d}>
+              {d} · {DIFFICULTY_LABELS[d]}
+            </option>
+          ))}
+        </Select>
+        <Select label="Status" value={filters.status} onChange={setFilter('status')}>
+          <option value="">Any</option>
+          <option value="draft">Draft</option>
+          <option value="approved">Approved</option>
+          <option value="retired">Retired</option>
+        </Select>
+      </div>
+
+      {setStatus.isError && (
+        <div className="mb-4">
+          <Alert tone="wrong">{errorMessage(setStatus.error)}</Alert>
+        </div>
+      )}
+
+      {list.isError ? (
+        <ErrorState error={list.error} onRetry={() => void list.refetch()} />
+      ) : list.isPending ? (
+        <LoadingBlock />
+      ) : list.data.items.length === 0 ? (
+        <EmptyState
+          title={filtered ? 'No questions match' : 'The bank is empty'}
+          description={
+            filtered ? 'Try another search or clear a filter.' : 'Add a question to get started.'
+          }
+        />
+      ) : (
+        <Panel>
+          <TableWrap minWidth={760}>
+            <thead>
+              <tr>
+                <Th>Question</Th>
+                <Th>Topic</Th>
+                <Th className="text-right">Lvl</Th>
+                <Th>Key</Th>
+                <Th>Status</Th>
+                <Th>
+                  <span className="sr-only">Actions</span>
+                </Th>
+              </tr>
+            </thead>
+            <tbody>
+              {list.data.items.map((q) => (
+                <tr key={q.id}>
+                  <Td className="max-w-md">
+                    {q.body}
+                    {q.source === 'ai' && (
+                      <span className="ml-2">
+                        <Tag tone="pencil">AI draft</Tag>
+                      </span>
+                    )}
+                  </Td>
+                  <Td className="whitespace-nowrap text-ink-2">{q.topicName}</Td>
+                  <Td className="text-right font-mono">{q.difficulty}</Td>
+                  <Td className="font-mono">{q.correctAnswer}</Td>
+                  <Td>
+                    <Status tone={STATUS_TONE[q.status]}>{q.status}</Status>
+                  </Td>
+                  <Td className="whitespace-nowrap text-right">
+                    {q.status !== 'approved' && (
+                      <Button
+                        size="sm"
+                        variant="quiet"
+                        onClick={() => setStatus.mutate({ id: q.id, status: 'approved' })}
+                      >
+                        Approve
+                      </Button>
+                    )}
+                    {q.status !== 'retired' && (
+                      <Button
+                        size="sm"
+                        variant="quiet"
+                        onClick={() => setStatus.mutate({ id: q.id, status: 'retired' })}
+                      >
+                        Retire
+                      </Button>
+                    )}
+                  </Td>
+                </tr>
+              ))}
+            </tbody>
+          </TableWrap>
+          <Pager
+            page={list.data.page}
+            pageSize={list.data.pageSize}
+            total={list.data.total}
+            onPage={setPage}
           />
-          <Select label="Topic" value={filters.topicId} onChange={setFilter('topicId')}>
-            <option value="">All topics</option>
-            {topics.data?.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
-            ))}
-          </Select>
-          <Select label="Difficulty" value={filters.difficulty} onChange={setFilter('difficulty')}>
-            <option value="">Any</option>
-            {[1, 2, 3, 4, 5].map((d) => (
-              <option key={d} value={d}>
-                {d} · {DIFFICULTY_LABELS[d]}
-              </option>
-            ))}
-          </Select>
-          <Select label="Status" value={filters.status} onChange={setFilter('status')}>
-            <option value="">Any</option>
-            <option value="draft">Draft</option>
-            <option value="approved">Approved</option>
-            <option value="retired">Retired</option>
-          </Select>
-        </div>
-
-        {setStatus.isError && (
-          <div className="mt-4">
-            <Alert tone="danger">{errorMessage(setStatus.error)}</Alert>
-          </div>
-        )}
-
-        <div className="mt-6">
-          {list.isError ? (
-            <ErrorState error={list.error} onRetry={() => void list.refetch()} />
-          ) : list.isPending ? (
-            <LoadingBlock />
-          ) : list.data.items.length === 0 ? (
-            <EmptyState
-              title="No questions match"
-              description="Try a different search or clear the filters."
-            />
-          ) : (
-            <>
-              <TableWrap>
-                <thead>
-                  <tr>
-                    <Th>Question</Th>
-                    <Th>Topic</Th>
-                    <Th>Level</Th>
-                    <Th>Answer</Th>
-                    <Th>Status</Th>
-                    <Th>
-                      <span className="sr-only">Actions</span>
-                    </Th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {list.data.items.map((q) => (
-                    <tr key={q.id}>
-                      <Td className="max-w-md">
-                        {q.body}
-                        {q.source === 'ai' && (
-                          <span className="ml-2">
-                            <Badge tone="brand">AI-generated</Badge>
-                          </span>
-                        )}
-                      </Td>
-                      <Td className="whitespace-nowrap text-ink-muted">{q.topicName}</Td>
-                      <Td className="tabular-nums">{q.difficulty}</Td>
-                      <Td className="tabular-nums">{q.correctAnswer}</Td>
-                      <Td>
-                        <Badge tone={STATUS_TONE[q.status]}>{q.status}</Badge>
-                      </Td>
-                      <Td className="whitespace-nowrap">
-                        {q.status !== 'approved' && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => setStatus.mutate({ id: q.id, status: 'approved' })}
-                          >
-                            Approve
-                          </Button>
-                        )}
-                        {q.status !== 'retired' && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => setStatus.mutate({ id: q.id, status: 'retired' })}
-                          >
-                            Retire
-                          </Button>
-                        )}
-                      </Td>
-                    </tr>
-                  ))}
-                </tbody>
-              </TableWrap>
-              <Pager
-                page={list.data.page}
-                pageSize={list.data.pageSize}
-                total={list.data.total}
-                onPage={setPage}
-              />
-            </>
-          )}
-        </div>
-      </Card>
+        </Panel>
+      )}
       <AddQuestionModal open={adding} onClose={() => setAdding(false)} topics={topics.data ?? []} />
     </>
   );
@@ -273,7 +276,7 @@ function AddQuestionModal({
               </option>
             ))}
           </Select>
-          <Select label="Difficulty" value={form.difficulty} onChange={set('difficulty')}>
+          <Select label="Level" value={form.difficulty} onChange={set('difficulty')}>
             {[1, 2, 3, 4, 5].map((d) => (
               <option key={d} value={d}>
                 {d}
@@ -288,7 +291,8 @@ function AddQuestionModal({
         <TextArea label="Question" value={form.body} onChange={set('body')} error={errors.body} />
         {form.type === 'multiple_choice' && (
           <TextArea
-            label="Options (one per line)"
+            label="Options"
+            hint="One per line."
             value={form.options}
             onChange={set('options')}
             error={errors.options}
@@ -296,10 +300,11 @@ function AddQuestionModal({
           />
         )}
         <Input
-          label="Correct answer"
+          label="Answer key"
           value={form.correctAnswer}
           onChange={set('correctAnswer')}
           error={errors.correctAnswer}
+          className="[&_input]:font-mono"
           hint={
             form.type === 'multiple_choice'
               ? 'Must match one option exactly.'
@@ -307,14 +312,15 @@ function AddQuestionModal({
           }
         />
         <TextArea
-          label="Explanation"
+          label="Worked explanation"
+          hint="Shown to students after they answer."
           value={form.explanation}
           onChange={set('explanation')}
           error={errors.explanation}
         />
-        {create.isError && <Alert tone="danger">{errorMessage(create.error)}</Alert>}
+        {create.isError && <Alert tone="wrong">{errorMessage(create.error)}</Alert>}
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="secondary" onClick={onClose}>
+          <Button type="button" variant="quiet" onClick={onClose}>
             Cancel
           </Button>
           <Button type="submit" loading={create.isPending}>
@@ -323,35 +329,5 @@ function AddQuestionModal({
         </div>
       </form>
     </Modal>
-  );
-}
-
-function TextArea({
-  label,
-  error,
-  rows = 3,
-  ...rest
-}: {
-  label: string;
-  error?: string;
-  rows?: number;
-  value: string;
-  onChange: (e: { target: { value: string } }) => void;
-}) {
-  const id = `ta-${label.replace(/\W+/g, '-').toLowerCase()}`;
-  return (
-    <div>
-      <label htmlFor={id} className="mb-1.5 block text-sm font-medium text-ink">
-        {label}
-      </label>
-      <textarea
-        id={id}
-        rows={rows}
-        aria-invalid={error ? true : undefined}
-        className="block w-full rounded-lg border border-line px-3 py-2 text-sm text-ink"
-        {...rest}
-      />
-      {error && <p className="mt-1 text-sm text-danger-fg">{error}</p>}
-    </div>
   );
 }

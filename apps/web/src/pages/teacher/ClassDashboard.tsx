@@ -3,16 +3,19 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ClassDto, ClassSummaryDto } from '@learnloop/shared';
 import {
   Alert,
-  Badge,
   Button,
-  Card,
+  Code,
   EmptyState,
   ErrorState,
   LoadingBlock,
   Meter,
   PageHeader,
-  Stat,
+  Panel,
+  PanelHeader,
+  StatStrip,
+  Status,
   TableWrap,
+  Tag,
   Td,
   Th,
 } from '../../components/ui';
@@ -45,31 +48,26 @@ export default function ClassDashboard() {
 
   if (summary.isError)
     return <ErrorState error={summary.error} onRetry={() => void summary.refetch()} />;
-  if (summary.isPending) return <LoadingBlock />;
+  if (summary.isPending) return <LoadingBlock rows={4} />;
   const s = summary.data;
+  const atRisk = new Set(s.studentsAtRisk.map((r) => r.studentId));
 
   return (
     <>
-      <div className="mb-2 text-sm">
-        <Link to="/teacher" className="text-brand-700 hover:underline">
-          ← Classes
-        </Link>
-      </div>
+      <nav aria-label="Breadcrumb" className="mb-3 text-sm text-ink-3">
+        <Link to="/teacher" className="hover:text-ink">
+          Classes
+        </Link>{' '}
+        / <span className="text-ink-2">{s.className}</span>
+      </nav>
       <PageHeader
         title={s.className}
         subtitle={
           cls?.joinCode ? (
-            <>
-              Join code{' '}
-              <span className="rounded bg-slate-100 px-2 py-0.5 font-mono font-semibold tracking-wider text-ink">
-                {cls.joinCode}
-              </span>
-              {cls.archived && (
-                <span className="ml-2">
-                  <Badge>Archived</Badge>
-                </span>
-              )}
-            </>
+            <span className="flex flex-wrap items-center gap-2">
+              Students join with <Code>{cls.joinCode}</Code>
+              {cls.archived && <Tag>Archived</Tag>}
+            </span>
           ) : undefined
         }
         actions={
@@ -88,10 +86,10 @@ export default function ClassDashboard() {
               loading={update.isPending && update.variables?.rotateJoinCode}
               onClick={() => update.mutate({ rotateJoinCode: true })}
             >
-              New join code
+              New code
             </Button>
             <Button
-              variant="ghost"
+              variant="quiet"
               size="sm"
               onClick={() => update.mutate({ archived: !cls?.archived })}
             >
@@ -101,151 +99,200 @@ export default function ClassDashboard() {
         }
       />
       {(update.isError || exportCsv.isError) && (
-        <div className="mb-4">
-          <Alert tone="danger">{errorMessage(update.error ?? exportCsv.error)}</Alert>
+        <div className="mb-6">
+          <Alert tone="wrong">{errorMessage(update.error ?? exportCsv.error)}</Alert>
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat label="Students" value={s.studentCount} />
-        <Stat
-          label="Average score"
-          value={pct(s.averageScore)}
-          hint="Accuracy across all practice"
-        />
-        <Stat label="Completion rate" value={pct(s.completionRate)} hint="Assigned work finished" />
-        <Stat label="Students at risk" value={s.studentsAtRisk.length} />
-      </div>
+      <StatStrip
+        items={[
+          { label: 'Students', value: s.studentCount },
+          { label: 'Avg. correct', value: pct(s.averageScore), note: 'across all practice' },
+          { label: 'Work handed in', value: pct(s.completionRate), note: 'of everything assigned' },
+          {
+            label: 'Need attention',
+            value: s.studentsAtRisk.length,
+            note: 'low accuracy or overdue',
+          },
+        ]}
+      />
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-3">
-        <Card>
-          <h2 className="font-semibold text-ink">Weakest topics</h2>
-          {s.weakestTopics.length === 0 ? (
-            <p className="mt-3 text-sm text-ink-muted">No practice data yet.</p>
-          ) : (
-            <ul className="mt-4 space-y-4">
-              {s.weakestTopics.map((t) => (
-                <li key={t.topicId}>
-                  <div className="mb-1 flex justify-between text-sm">
-                    <span className="text-ink">{t.topicName}</span>
-                    <span className="tabular-nums text-ink-muted">{pct(t.averageMastery)}</span>
-                  </div>
-                  <Meter
-                    value={t.averageMastery}
-                    label={`${t.topicName} average mastery`}
-                    tone="warn"
-                  />
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
-        <Card className="lg:col-span-2">
-          <h2 className="font-semibold text-ink">Students at risk</h2>
+      <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+        <Panel as="section">
+          <PanelHeader
+            title="Needs attention"
+            meta={`${s.studentsAtRisk.length} student${s.studentsAtRisk.length === 1 ? '' : 's'}`}
+          />
           {s.studentsAtRisk.length === 0 ? (
-            <p className="mt-3 text-sm text-ink-muted">No one is flagged right now.</p>
+            <p className="px-5 py-6 text-sm text-ink-3">No one is flagged right now.</p>
           ) : (
-            <ul className="mt-3 divide-y divide-line">
+            <ul className="divide-y divide-rule">
               {s.studentsAtRisk.map((r) => (
                 <li
                   key={r.studentId}
-                  className="flex flex-wrap items-center justify-between gap-2 py-2"
+                  className="flex flex-wrap items-center justify-between gap-2 px-5 py-3"
                 >
-                  <Link
-                    to={`/teacher/students/${r.studentId}`}
-                    className="font-medium text-brand-700 hover:underline"
-                  >
+                  <Link to={`/teacher/students/${r.studentId}`} className="link font-medium">
                     {r.displayName}
                   </Link>
-                  <span className="flex flex-wrap gap-1">
+                  <span className="flex flex-wrap gap-1.5">
                     {r.reasons.map((x) => (
-                      <Badge key={x} tone="danger">
+                      <Tag key={x} tone="wrong">
                         {x}
-                      </Badge>
+                      </Tag>
                     ))}
                   </span>
                 </li>
               ))}
             </ul>
           )}
-        </Card>
+        </Panel>
+
+        <Panel as="section">
+          <PanelHeader title="Weakest topics" meta="average mastery" />
+          {s.weakestTopics.length === 0 ? (
+            <p className="px-5 py-6 text-sm text-ink-3">No practice yet.</p>
+          ) : (
+            <ol className="divide-y divide-rule">
+              {s.weakestTopics.map((t, i) => (
+                <li
+                  key={t.topicId}
+                  className="grid grid-cols-[1.5rem_minmax(0,1fr)_3rem] items-center gap-x-3 gap-y-1.5 px-5 py-3"
+                >
+                  <span className="font-mono text-xs text-ink-3">{i + 1}</span>
+                  <span className="text-sm">{t.topicName}</span>
+                  <span className="text-right font-mono text-sm tabular-nums">
+                    {pct(t.averageMastery)}
+                  </span>
+                  <span />
+                  <Meter
+                    value={t.averageMastery}
+                    label={`${t.topicName} average mastery`}
+                    tone={t.averageMastery < 0.4 ? 'wrong' : 'ink'}
+                  />
+                </li>
+              ))}
+            </ol>
+          )}
+        </Panel>
       </div>
 
-      <Card className="mt-6">
-        <h2 className="font-semibold text-ink">Assignments</h2>
+      <Panel as="section" className="mt-6">
+        <PanelHeader title="Assigned work" />
         {s.assignments.length === 0 ? (
-          <div className="mt-3">
+          <div className="p-5">
             <EmptyState
               title="Nothing assigned yet"
-              description="Create a quiz, then assign it to this class from the Quizzes page."
+              description="Build a quiz on the Quizzes page and assign it to this class."
             />
           </div>
         ) : (
-          <ul className="mt-3 divide-y divide-line">
-            {s.assignments.map((a) => (
-              <li key={a.id} className="grid gap-2 py-3 sm:grid-cols-3 sm:items-center">
-                <span className="font-medium text-ink">{a.quizTitle}</span>
-                <span className="text-sm text-ink-muted">{dueLabel(a.dueAt)}</span>
-                <div>
-                  <div className="mb-1 text-sm tabular-nums text-ink-muted">
-                    {a.completed} of {a.total} done
-                  </div>
-                  <Meter
-                    value={a.total ? a.completed / a.total : 0}
-                    label={`${a.quizTitle} completion`}
-                  />
-                </div>
-              </li>
-            ))}
-          </ul>
+          <TableWrap>
+            <thead>
+              <tr>
+                <Th>Quiz</Th>
+                <Th>Due</Th>
+                <Th className="w-1/3">Handed in</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {s.assignments.map((a) => {
+                const overdue = new Date(a.dueAt) < new Date() && a.completed < a.total;
+                return (
+                  <tr key={a.id}>
+                    <Td className="font-medium">{a.quizTitle}</Td>
+                    <Td>
+                      <Status tone={overdue ? 'wrong' : 'neutral'}>{dueLabel(a.dueAt)}</Status>
+                    </Td>
+                    <Td>
+                      <div className="flex items-center gap-3">
+                        <Meter
+                          value={a.total ? a.completed / a.total : 0}
+                          label={`${a.quizTitle} handed in`}
+                        />
+                        <span className="w-14 shrink-0 text-right font-mono text-xs tabular-nums text-ink-2">
+                          {a.completed}/{a.total}
+                        </span>
+                      </div>
+                    </Td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </TableWrap>
         )}
-      </Card>
+      </Panel>
 
-      <Card className="mt-6">
-        <h2 className="mb-3 font-semibold text-ink">Students</h2>
+      <Panel as="section" className="mt-6">
+        <PanelHeader title="Students" meta="sorted by name" />
         {s.students.length === 0 ? (
-          <EmptyState
-            title="No students yet"
-            description={
-              cls?.joinCode ? `Share the join code ${cls.joinCode} with your class.` : undefined
-            }
-          />
+          <div className="p-5">
+            <EmptyState
+              title="No students yet"
+              description={
+                cls?.joinCode ? `Share the code ${cls.joinCode} with your class.` : undefined
+              }
+            />
+          </div>
         ) : (
           <TableWrap>
             <thead>
               <tr>
                 <Th>Name</Th>
-                <Th>Answered</Th>
-                <Th>Accuracy</Th>
-                <Th>Overdue</Th>
+                <Th className="text-right">Answered</Th>
+                <Th className="w-1/3">Correct</Th>
+                <Th className="text-right">Overdue</Th>
               </tr>
             </thead>
             <tbody>
               {s.students.map((st) => (
-                <tr key={st.studentId}>
+                <tr key={st.studentId} className="hover:bg-paper">
                   <Td>
-                    <Link
-                      to={`/teacher/students/${st.studentId}`}
-                      className="font-medium text-brand-700 hover:underline"
-                    >
+                    <Link to={`/teacher/students/${st.studentId}`} className="link font-medium">
                       {st.displayName}
                     </Link>
-                  </Td>
-                  <Td className="tabular-nums">{st.attempts}</Td>
-                  <Td className="tabular-nums">{st.attempts ? pct(st.accuracy) : '—'}</Td>
-                  <Td>
-                    {st.overdueCount ? (
-                      <Badge tone="danger">{st.overdueCount}</Badge>
-                    ) : (
-                      <span className="text-ink-faint">0</span>
+                    {atRisk.has(st.studentId) && (
+                      <>
+                        <span
+                          className="ml-2 inline-block h-1.5 w-1.5 rounded-full bg-incorrect align-middle"
+                          aria-hidden="true"
+                        />
+                        <span className="sr-only"> (needs attention)</span>
+                      </>
                     )}
+                  </Td>
+                  <Td className="text-right font-mono tabular-nums">{st.attempts}</Td>
+                  <Td>
+                    {st.attempts ? (
+                      <div className="flex items-center gap-3">
+                        <Meter
+                          value={st.accuracy}
+                          label={`${st.displayName} accuracy`}
+                          tone={st.accuracy < 0.5 ? 'wrong' : 'ink'}
+                        />
+                        <span className="w-10 shrink-0 text-right font-mono text-xs tabular-nums">
+                          {pct(st.accuracy)}
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-ink-3">—</span>
+                    )}
+                  </Td>
+                  <Td
+                    className={
+                      st.overdueCount
+                        ? 'text-right font-mono text-incorrect'
+                        : 'text-right font-mono text-ink-3'
+                    }
+                  >
+                    {st.overdueCount}
                   </Td>
                 </tr>
               ))}
             </tbody>
           </TableWrap>
         )}
-      </Card>
+      </Panel>
     </>
   );
 }

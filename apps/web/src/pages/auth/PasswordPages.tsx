@@ -30,16 +30,16 @@ export function ForgotPasswordPage() {
       title="Reset your password"
       subtitle="We’ll email you a link that works once, for 30 minutes."
       footer={
-        <Link className="text-brand-700 hover:underline" to="/login">
+        <Link className="link" to="/login">
           Back to log in
         </Link>
       }
     >
       {sent ? (
-        <Alert tone="success">If an account exists for {email}, a reset link is on its way.</Alert>
+        <Alert tone="right">If an account exists for {email}, a reset link is on its way.</Alert>
       ) : (
         <form className="space-y-4" onSubmit={onSubmit} noValidate>
-          {error && <Alert tone="danger">{error}</Alert>}
+          {error && <Alert tone="wrong">{error}</Alert>}
           <Input
             label="Email"
             type="email"
@@ -86,18 +86,18 @@ export function ResetPasswordPage() {
     <AuthShell
       title="Choose a new password"
       footer={
-        <Link className="text-brand-700 hover:underline" to="/login">
+        <Link className="link" to="/login">
           Back to log in
         </Link>
       }
     >
       {!token ? (
-        <Alert tone="danger">This reset link is missing its token. Request a new one.</Alert>
+        <Alert tone="wrong">This reset link is missing its token. Request a new one.</Alert>
       ) : done ? (
-        <Alert tone="success">Your password has been changed. You can now log in.</Alert>
+        <Alert tone="right">Your password has been changed. You can now log in.</Alert>
       ) : (
         <form className="space-y-4" onSubmit={onSubmit} noValidate>
-          {error && <Alert tone="danger">{error}</Alert>}
+          {error && <Alert tone="wrong">{error}</Alert>}
           <Input
             label="New password"
             type="password"

@@ -45,30 +45,30 @@ export function RegisterPage() {
 
   return (
     <AuthShell
-      title="Create your account"
-      subtitle="All demo data is synthetic. No real student records."
+      title="Create an account"
+      subtitle="Students practise; teachers set work and see results."
       footer={
         <>
           Already have an account?{' '}
-          <Link className="font-medium text-brand-700 hover:underline" to="/login">
+          <Link className="link" to="/login">
             Log in
           </Link>
         </>
       }
     >
       <form className="space-y-4" onSubmit={onSubmit} noValidate>
-        {error && <Alert tone="danger">{error}</Alert>}
+        {error && <Alert tone="wrong">{error}</Alert>}
         <fieldset>
-          <legend className="mb-1.5 text-sm font-medium text-ink">I am a</legend>
-          <div className="grid grid-cols-2 gap-2">
+          <legend className="mb-1.5 text-sm font-medium">I’m a</legend>
+          <div className="grid grid-cols-2 overflow-hidden rounded border border-rule-strong">
             {(['student', 'teacher'] as const).map((r) => (
               <label
                 key={r}
                 className={cx(
-                  'flex cursor-pointer items-center justify-center rounded-lg border px-3 py-2 text-sm font-medium capitalize',
+                  'flex h-10 cursor-pointer items-center justify-center text-sm capitalize transition-colors first:border-r first:border-rule-strong has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:-outline-offset-2 has-[:focus-visible]:outline-ink',
                   form.role === r
-                    ? 'border-brand-600 bg-brand-50 text-brand-700'
-                    : 'border-line text-ink-muted',
+                    ? 'bg-ink font-medium text-white'
+                    : 'bg-paper-raised text-ink-2 hover:bg-paper-sunken',
                 )}
               >
                 <input

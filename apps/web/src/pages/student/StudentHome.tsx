@@ -11,18 +11,21 @@ import type {
 } from '@learnloop/shared';
 import {
   Alert,
-  Badge,
   Button,
-  Card,
   EmptyState,
   ErrorState,
   Input,
   LoadingBlock,
+  Meter,
   PageHeader,
+  Panel,
+  PanelHeader,
+  SectionTitle,
+  Status,
 } from '../../components/ui';
 import { api, errorMessage } from '../../lib/api';
 import { useUser } from '../../lib/auth';
-import { dueLabel, pct } from '../../lib/format';
+import { DIFFICULTY_LABELS, dueLabel, pct } from '../../lib/format';
 
 export function useStartSession() {
   const navigate = useNavigate();
@@ -37,134 +40,171 @@ export function useStartSession() {
   });
 }
 
+const today = () =>
+  new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
+
 export function StudentHome() {
   const user = useUser();
-  const navigate = useNavigate();
   const start = useStartSession();
   const topics = useQuery({ queryKey: ['topics'], queryFn: () => api.get<TopicDto[]>('/topics') });
   const progress = useQuery({
     queryKey: ['progress', user.id],
     queryFn: () => api.get<ProgressDto>(`/students/${user.id}/progress`),
   });
-  const sessions = useQuery({
-    queryKey: ['sessions'],
-    queryFn: () => api.get<PracticeSessionDto[]>('/practice/sessions'),
-  });
 
-  // Recommend the topic with the lowest mastery; new students start with the first topic.
-  const mastery = new Map(progress.data?.mastery.map((m) => [m.topicId, m.score]));
-  const recommended = topics.data
-    ?.slice()
-    .sort((a, b) => (mastery.get(a.id) ?? -1) - (mastery.get(b.id) ?? -1))[0];
-  const unfinished = sessions.data?.find((s) => !s.completed && !s.assignmentId);
+  const mastery = new Map(progress.data?.mastery.map((m) => [m.topicId, m]));
+  const p = progress.data;
 
   return (
     <>
       <PageHeader
-        title={`Hi, ${user.displayName.split(' ')[0]}`}
+        eyebrow={today()}
+        title={`${user.displayName.split(' ')[0]}’s practice`}
         subtitle={
-          progress.data
-            ? `${progress.data.streakDays}-day streak · ${pct(progress.data.accuracy)} accuracy overall`
-            : 'Ready for some practice?'
+          p && p.totalAttempts > 0
+            ? `${p.streakDays}-day streak · ${pct(p.accuracy)} correct across ${p.totalAttempts} questions`
+            : 'Ten questions at a time. They get harder as you get them right.'
         }
       />
 
       {start.isError && (
-        <div className="mb-4">
-          <Alert tone="danger">{errorMessage(start.error)}</Alert>
+        <div className="mb-6">
+          <Alert tone="wrong">{errorMessage(start.error)}</Alert>
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="space-y-6 lg:col-span-2">
-          <Card className="bg-gradient-to-br from-brand-600 to-brand-800 text-white">
-            {topics.isPending ? (
-              <LoadingBlock rows={1} label="Loading practice" />
-            ) : unfinished ? (
-              <>
-                <p className="text-sm text-brand-100">Pick up where you left off</p>
-                <p className="mt-1 text-xl font-semibold">{unfinished.topicName}</p>
-                <p className="mt-1 text-sm text-brand-100">
-                  {unfinished.answeredCount} of {unfinished.totalQuestions} answered
-                </p>
-                <Button
-                  variant="secondary"
-                  size="lg"
-                  className="mt-4"
-                  onClick={() => navigate(`/student/practice/${unfinished.id}`)}
-                >
-                  Resume practice
-                </Button>
-              </>
-            ) : recommended ? (
-              <>
-                <p className="text-sm text-brand-100">Recommended for you</p>
-                <p className="mt-1 text-xl font-semibold">{recommended.name}</p>
-                <p className="mt-1 text-sm text-brand-100">
-                  10 questions that adapt to how you’re doing.
-                </p>
-                <Button
-                  variant="secondary"
-                  size="lg"
-                  className="mt-4"
-                  loading={start.isPending}
-                  onClick={() => start.mutate({ topicId: recommended.id })}
-                >
-                  Start practice
-                </Button>
-              </>
-            ) : (
-              <p>No topics available yet.</p>
-            )}
-          </Card>
-
-          <AssignmentsCard />
-
+      <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_300px]">
+        <div className="space-y-10">
+          <UpNext topics={topics.data} mastery={mastery} />
+          <Assignments />
           <section aria-labelledby="topics-heading">
-            <h2 id="topics-heading" className="mb-3 text-lg font-semibold text-ink">
-              Practise a topic
-            </h2>
+            <SectionTitle id="topics-heading" aside="Grades 6–8">
+              Topics
+            </SectionTitle>
             {topics.isError ? (
               <ErrorState error={topics.error} onRetry={() => void topics.refetch()} />
             ) : topics.isPending ? (
-              <LoadingBlock />
+              <LoadingBlock rows={4} />
             ) : (
-              <div className="grid gap-3 sm:grid-cols-2">
-                {topics.data.map((t) => {
-                  const score = mastery.get(t.id);
-                  return (
-                    <button
-                      key={t.id}
-                      type="button"
-                      disabled={start.isPending}
-                      onClick={() => start.mutate({ topicId: t.id })}
-                      className="rounded-card border border-line bg-white p-4 text-left shadow-card transition hover:border-brand-200 hover:shadow-md disabled:opacity-60"
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="font-medium text-ink">{t.name}</span>
-                        <Badge tone="neutral">Grade {t.gradeLevel}</Badge>
-                      </div>
-                      <p className="mt-2 text-sm text-ink-muted">
-                        {score === undefined ? 'Not started' : `Mastery ${pct(score)}`}
-                      </p>
-                    </button>
-                  );
-                })}
-              </div>
+              <Panel>
+                <ul className="divide-y divide-rule">
+                  {topics.data.map((t) => {
+                    const m = mastery.get(t.id);
+                    return (
+                      <li key={t.id}>
+                        <button
+                          type="button"
+                          disabled={start.isPending}
+                          onClick={() => start.mutate({ topicId: t.id })}
+                          className="group grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-6 gap-y-2 px-5 py-3.5 text-left transition-colors hover:bg-paper sm:grid-cols-[minmax(0,1fr)_180px_auto] disabled:opacity-60"
+                        >
+                          <span className="min-w-0">
+                            <span className="block font-medium">{t.name}</span>
+                            <span className="font-mono text-xs text-ink-3">
+                              Grade {t.gradeLevel}
+                            </span>
+                          </span>
+                          <span className="col-span-2 row-start-2 flex items-center gap-3 sm:col-span-1 sm:row-start-auto">
+                            <Meter
+                              value={m?.score ?? 0}
+                              label={`${t.name} mastery`}
+                              tone={m && m.score >= 0.7 ? 'right' : 'ink'}
+                            />
+                            <span className="w-10 shrink-0 text-right font-mono text-xs tabular-nums text-ink-2">
+                              {m ? pct(m.score) : '—'}
+                            </span>
+                          </span>
+                          <span className="text-sm text-ink-3 transition-colors group-hover:text-ink">
+                            Practise <span aria-hidden="true">→</span>
+                          </span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </Panel>
             )}
           </section>
         </div>
 
-        <aside className="space-y-6">
-          <JoinClassCard />
-          <MyClassesCard />
+        <aside className="space-y-8">
+          <JoinClass />
+          <MyClasses />
         </aside>
       </div>
     </>
   );
 }
 
-function AssignmentsCard() {
+/** The single next action: resume what's open, or the weakest topic. */
+function UpNext({
+  topics,
+  mastery,
+}: {
+  topics: TopicDto[] | undefined;
+  mastery: Map<string, { score: number }>;
+}) {
+  const navigate = useNavigate();
+  const start = useStartSession();
+  const sessions = useQuery({
+    queryKey: ['sessions'],
+    queryFn: () => api.get<PracticeSessionDto[]>('/practice/sessions'),
+  });
+  if (!topics || sessions.isPending) return <LoadingBlock rows={1} label="Loading next activity" />;
+
+  const open = sessions.data?.find((s) => !s.completed && !s.assignmentId);
+  const weakest = topics
+    .slice()
+    .sort((a, b) => (mastery.get(a.id)?.score ?? -1) - (mastery.get(b.id)?.score ?? -1))[0];
+
+  return (
+    <section
+      aria-label="Up next"
+      className="rounded border border-rule border-l-[3px] border-l-pencil bg-paper-raised"
+    >
+      <div className="flex flex-col gap-5 p-6 sm:flex-row sm:items-center sm:justify-between">
+        {open ? (
+          <div>
+            <p className="eyebrow">Unfinished</p>
+            <p className="mt-1 font-serif text-2xl font-semibold">{open.topicName}</p>
+            <p className="mt-1 text-sm text-ink-2">
+              {open.answeredCount} of {open.totalQuestions} answered · level{' '}
+              {open.currentDifficulty} ({DIFFICULTY_LABELS[open.currentDifficulty]?.toLowerCase()})
+            </p>
+          </div>
+        ) : weakest ? (
+          <div>
+            <p className="eyebrow">Suggested</p>
+            <p className="mt-1 font-serif text-2xl font-semibold">{weakest.name}</p>
+            <p className="mt-1 text-sm text-ink-2">
+              {mastery.has(weakest.id)
+                ? `Your lowest topic at ${pct(mastery.get(weakest.id)!.score)} mastery.`
+                : 'You haven’t tried this one yet.'}{' '}
+              10 questions, about 10 minutes.
+            </p>
+          </div>
+        ) : (
+          <p className="text-ink-2">No topics yet.</p>
+        )}
+        {open ? (
+          <Button size="lg" onClick={() => navigate(`/student/practice/${open.id}`)}>
+            Resume
+          </Button>
+        ) : weakest ? (
+          <Button
+            size="lg"
+            loading={start.isPending}
+            onClick={() => start.mutate({ topicId: weakest.id })}
+          >
+            Start practice
+          </Button>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
+function Assignments() {
   const start = useStartSession();
   const q = useQuery({
     queryKey: ['assignments'],
@@ -175,40 +215,47 @@ function AssignmentsCard() {
 
   return (
     <section aria-labelledby="assigned-heading">
-      <h2 id="assigned-heading" className="mb-3 text-lg font-semibold text-ink">
-        Assigned work
-      </h2>
+      <SectionTitle id="assigned-heading" aside={q.data && `${todo.length} to do`}>
+        Set by your teacher
+      </SectionTitle>
       {q.isError ? (
         <ErrorState error={q.error} onRetry={() => void q.refetch()} />
       ) : q.isPending ? (
         <LoadingBlock rows={2} />
       ) : q.data.length === 0 ? (
         <EmptyState
-          title="Nothing assigned right now"
-          description="When your teacher assigns a quiz, it shows up here."
+          title="Nothing set right now"
+          description="Work your teacher assigns will appear here with its due date."
         />
       ) : (
-        <Card className="p-0">
-          <ul className="divide-y divide-line">
+        <Panel>
+          <ul className="divide-y divide-rule">
             {[...todo, ...done].map((a) => (
               <li
                 key={a.id}
-                className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between"
+                className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
               >
                 <div className="min-w-0">
-                  <p className="font-medium text-ink">{a.quizTitle}</p>
-                  <p className="text-sm text-ink-muted">
-                    {a.className} · {a.questionCount} questions
+                  <p
+                    className={
+                      a.completed ? 'text-ink-3 line-through decoration-ink-4' : 'font-medium'
+                    }
+                  >
+                    {a.quizTitle}
+                  </p>
+                  <p className="text-sm text-ink-3">
+                    {a.className} · {a.topicName} · {a.questionCount} questions
                   </p>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex shrink-0 items-center gap-4">
                   {a.completed ? (
-                    <Badge tone="success">Done</Badge>
+                    <Status tone="right">Handed in</Status>
                   ) : (
                     <>
-                      <Badge tone={a.overdue ? 'danger' : 'warn'}>{dueLabel(a.dueAt)}</Badge>
+                      <Status tone={a.overdue ? 'wrong' : 'pencil'}>{dueLabel(a.dueAt)}</Status>
                       <Button
                         size="sm"
+                        variant={a.overdue ? 'primary' : 'secondary'}
                         loading={start.isPending && start.variables?.assignmentId === a.id}
                         onClick={() => start.mutate({ assignmentId: a.id })}
                       >
@@ -220,13 +267,13 @@ function AssignmentsCard() {
               </li>
             ))}
           </ul>
-        </Card>
+        </Panel>
       )}
     </section>
   );
 }
 
-function JoinClassCard() {
+function JoinClass() {
   const qc = useQueryClient();
   const [code, setCode] = useState('');
   const join = useMutation({
@@ -242,51 +289,59 @@ function JoinClassCard() {
     if (code.trim()) join.mutate(code.trim().toUpperCase());
   };
   return (
-    <Card>
-      <h2 className="font-semibold text-ink">Join a class</h2>
-      <form className="mt-3 space-y-3" onSubmit={onSubmit}>
+    <Panel as="section">
+      <PanelHeader title="Join a class" />
+      <form className="space-y-3 p-5" onSubmit={onSubmit}>
         <Input
-          label="Join code"
+          label="Class code"
           value={code}
-          onChange={(e) => setCode(e.target.value)}
-          placeholder="e.g. GRADE7AA"
+          onChange={(e) => setCode(e.target.value.toUpperCase())}
+          placeholder="GRADE7AA"
           autoCapitalize="characters"
+          spellCheck={false}
           maxLength={10}
-          hint="Ask your teacher for the code."
+          className="[&_input]:font-mono [&_input]:tracking-widest"
+          hint="Your teacher has it."
         />
-        {join.isError && <Alert tone="danger">{errorMessage(join.error)}</Alert>}
-        {join.isSuccess && <Alert tone="success">You joined {join.data.name}.</Alert>}
-        <Button type="submit" variant="secondary" className="w-full" loading={join.isPending}>
-          Join class
+        {join.isError && <Alert tone="wrong">{errorMessage(join.error)}</Alert>}
+        {join.isSuccess && <Alert tone="right">Joined {join.data.name}.</Alert>}
+        <Button
+          type="submit"
+          variant="secondary"
+          className="w-full"
+          loading={join.isPending}
+          disabled={!code.trim()}
+        >
+          Join
         </Button>
       </form>
-    </Card>
+    </Panel>
   );
 }
 
-function MyClassesCard() {
+function MyClasses() {
   const q = useQuery({ queryKey: ['classes'], queryFn: () => api.get<ClassDto[]>('/classes') });
   return (
-    <Card>
-      <h2 className="font-semibold text-ink">My classes</h2>
-      <div className="mt-3">
+    <Panel as="section">
+      <PanelHeader title="Your classes" />
+      <div className="px-5 py-4">
         {q.isError ? (
           <ErrorState error={q.error} onRetry={() => void q.refetch()} />
         ) : q.isPending ? (
-          <LoadingBlock rows={2} />
+          <LoadingBlock rows={1} />
         ) : q.data.length === 0 ? (
-          <p className="text-sm text-ink-muted">You haven’t joined a class yet.</p>
+          <p className="text-sm text-ink-3">Not in a class yet.</p>
         ) : (
-          <ul className="space-y-2">
+          <ul className="space-y-3">
             {q.data.map((c) => (
-              <li key={c.id} className="text-sm">
-                <span className="font-medium text-ink">{c.name}</span>
-                <span className="text-ink-muted"> · {c.teacherName}</span>
+              <li key={c.id}>
+                <p className="text-sm font-medium">{c.name}</p>
+                <p className="text-sm text-ink-3">{c.teacherName}</p>
               </li>
             ))}
           </ul>
         )}
       </div>
-    </Card>
+    </Panel>
   );
 }

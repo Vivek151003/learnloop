@@ -14,8 +14,9 @@ export default function ProgressPage() {
   return (
     <>
       <PageHeader
-        title="Your progress"
-        subtitle="Mastery grows as you answer more questions correctly."
+        eyebrow="Progress"
+        title="How you’re doing"
+        subtitle="Mastery rises with correct answers and dips with misses; recent work counts most."
       />
       {q.isError ? (
         <ErrorState error={q.error} onRetry={() => void q.refetch()} />

@@ -3,12 +3,13 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import type { AttemptDto, Paginated, ProgressDto } from '@learnloop/shared';
 import {
-  Badge,
-  Card,
   ErrorState,
   LoadingBlock,
   PageHeader,
   Pager,
+  Panel,
+  PanelHeader,
+  Status,
   TableWrap,
   Td,
   Th,
@@ -35,68 +36,75 @@ export default function StudentDetail() {
 
   if (progress.isError)
     return <ErrorState error={progress.error} onRetry={() => void progress.refetch()} />;
-  if (progress.isPending) return <LoadingBlock />;
+  if (progress.isPending) return <LoadingBlock rows={4} />;
 
   return (
     <>
-      <div className="mb-2 text-sm">
-        <button
-          type="button"
-          onClick={() => navigate(-1)}
-          className="text-brand-700 hover:underline"
-        >
-          ← Back
-        </button>
-      </div>
-      <PageHeader
-        title={progress.data.displayName}
-        subtitle="Student progress and attempt history"
-      />
+      <button
+        type="button"
+        onClick={() => navigate(-1)}
+        className="mb-3 text-sm text-ink-3 hover:text-ink"
+      >
+        <span aria-hidden="true">←</span> Back
+      </button>
+      <PageHeader eyebrow="Student" title={progress.data.displayName} />
       <ProgressView progress={progress.data} />
-      <Card className="mt-6">
-        <h2 className="mb-3 font-semibold text-ink">Attempt history</h2>
+
+      <Panel as="section" className="mt-8">
+        <PanelHeader
+          title="Every answer"
+          meta={attempts.data ? `${attempts.data.total} in total` : undefined}
+        />
         {attempts.isError ? (
-          <ErrorState error={attempts.error} onRetry={() => void attempts.refetch()} />
+          <div className="p-5">
+            <ErrorState error={attempts.error} onRetry={() => void attempts.refetch()} />
+          </div>
         ) : attempts.isPending ? (
-          <LoadingBlock rows={3} />
+          <div className="p-5">
+            <LoadingBlock rows={3} />
+          </div>
         ) : attempts.data.items.length === 0 ? (
-          <p className="text-sm text-ink-muted">No attempts yet.</p>
+          <p className="px-5 py-6 text-sm text-ink-3">No answers yet.</p>
         ) : (
           <>
-            <TableWrap>
+            <TableWrap minWidth={720}>
               <thead>
                 <tr>
                   <Th>When</Th>
                   <Th>Question</Th>
                   <Th>Answer</Th>
-                  <Th>Result</Th>
-                  <Th>Level</Th>
+                  <Th>Mark</Th>
+                  <Th className="text-right">Lvl</Th>
+                  <Th className="text-right">Time</Th>
                 </tr>
               </thead>
               <tbody>
                 {attempts.data.items.map((a) => (
                   <tr key={a.id}>
-                    <Td className="whitespace-nowrap text-ink-muted">{dateTime(a.createdAt)}</Td>
-                    <Td>
-                      <span className="line-clamp-2">{a.questionBody}</span>
-                      <span className="text-xs text-ink-faint">{a.topicName}</span>
+                    <Td className="whitespace-nowrap font-mono text-xs text-ink-3">
+                      {dateTime(a.createdAt)}
                     </Td>
-                    <Td className="tabular-nums">
+                    <Td className="max-w-sm">
+                      <span className="line-clamp-2">{a.questionBody}</span>
+                      <span className="text-xs text-ink-3">{a.topicName}</span>
+                    </Td>
+                    <Td className="font-mono">
                       {a.answer}
                       {!a.correct && (
-                        <span className="block text-xs text-ink-faint">
-                          Correct: {a.correctAnswer}
-                        </span>
+                        <span className="block text-xs text-ink-3">key: {a.correctAnswer}</span>
                       )}
                     </Td>
                     <Td>
                       {a.correct ? (
-                        <Badge tone="success">Correct</Badge>
+                        <Status tone="right">Right</Status>
                       ) : (
-                        <Badge tone="danger">Wrong</Badge>
+                        <Status tone="wrong">Wrong</Status>
                       )}
                     </Td>
-                    <Td className="tabular-nums">{a.difficulty}</Td>
+                    <Td className="text-right font-mono">{a.difficulty}</Td>
+                    <Td className="text-right font-mono text-xs text-ink-3">
+                      {Math.round(a.timeMs / 1000)}s
+                    </Td>
                   </tr>
                 ))}
               </tbody>
@@ -109,7 +117,7 @@ export default function StudentDetail() {
             />
           </>
         )}
-      </Card>
+      </Panel>
     </>
   );
 }

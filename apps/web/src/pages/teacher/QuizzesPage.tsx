@@ -10,16 +10,19 @@ import type {
 } from '@learnloop/shared';
 import {
   Alert,
-  Badge,
   Button,
-  Card,
   EmptyState,
   ErrorState,
   Input,
   LoadingBlock,
   Modal,
   PageHeader,
+  Panel,
   Select,
+  Status,
+  TableWrap,
+  Td,
+  Th,
   cx,
 } from '../../components/ui';
 import { api, errorMessage, qs } from '../../lib/api';
@@ -36,8 +39,9 @@ export default function QuizzesPage() {
   return (
     <>
       <PageHeader
+        eyebrow="Teaching"
         title="Quizzes"
-        subtitle="Build a quiz from approved questions, then assign it to a class."
+        subtitle="A fixed set of approved questions, served in your order. Assign one to a class or to chosen students."
         actions={
           user.role === 'teacher' && <Button onClick={() => setBuilding(true)}>New quiz</Button>
         }
@@ -49,33 +53,48 @@ export default function QuizzesPage() {
       ) : q.data.length === 0 ? (
         <EmptyState
           title="No quizzes yet"
-          description="Pick questions from the bank to build your first quiz."
+          description="Pick questions from the bank to build your first one."
           action={<Button onClick={() => setBuilding(true)}>Build a quiz</Button>}
         />
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {q.data.map((quiz) => (
-            <Card key={quiz.id}>
-              <div className="flex items-start justify-between gap-2">
-                <h2 className="font-semibold text-ink">{quiz.title}</h2>
-                <Badge tone={quiz.status === 'published' ? 'success' : 'warn'}>{quiz.status}</Badge>
-              </div>
-              <p className="mt-1 text-sm text-ink-muted">
-                {quiz.topicName} · {quiz.questionCount} questions · {shortDate(quiz.createdAt)}
-              </p>
-              {user.role === 'teacher' && (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="mt-4"
-                  onClick={() => setAssigning(quiz)}
-                >
-                  Assign
-                </Button>
-              )}
-            </Card>
-          ))}
-        </div>
+        <Panel>
+          <TableWrap>
+            <thead>
+              <tr>
+                <Th>Title</Th>
+                <Th>Topic</Th>
+                <Th className="text-right">Questions</Th>
+                <Th>Created</Th>
+                <Th>Status</Th>
+                <Th>
+                  <span className="sr-only">Actions</span>
+                </Th>
+              </tr>
+            </thead>
+            <tbody>
+              {q.data.map((quiz) => (
+                <tr key={quiz.id}>
+                  <Td className="font-medium">{quiz.title}</Td>
+                  <Td className="text-ink-2">{quiz.topicName}</Td>
+                  <Td className="text-right font-mono">{quiz.questionCount}</Td>
+                  <Td className="font-mono text-xs text-ink-3">{shortDate(quiz.createdAt)}</Td>
+                  <Td>
+                    <Status tone={quiz.status === 'published' ? 'right' : 'pencil'}>
+                      {quiz.status}
+                    </Status>
+                  </Td>
+                  <Td className="text-right">
+                    {user.role === 'teacher' && (
+                      <Button variant="secondary" size="sm" onClick={() => setAssigning(quiz)}>
+                        Assign…
+                      </Button>
+                    )}
+                  </Td>
+                </tr>
+              ))}
+            </tbody>
+          </TableWrap>
+        </Panel>
       )}
       <QuizBuilder open={building} onClose={() => setBuilding(false)} />
       {assigning && <AssignModal quiz={assigning} onClose={() => setAssigning(null)} />}
@@ -125,7 +144,7 @@ function QuizBuilder({ open, onClose }: { open: boolean; onClose: () => void }) 
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           maxLength={120}
-          placeholder="e.g. Fractions check-in"
+          placeholder="Fractions check-in"
         />
         <Select
           label="Topic"
@@ -144,10 +163,10 @@ function QuizBuilder({ open, onClose }: { open: boolean; onClose: () => void }) 
         </Select>
         {topicId && (
           <fieldset>
-            <legend className="mb-1.5 text-sm font-medium text-ink">
-              Questions{' '}
-              <span className="font-normal text-ink-muted">
-                ({picked.length} selected, in order)
+            <legend className="mb-1.5 flex w-full justify-between text-sm font-medium">
+              Questions
+              <span className="font-mono text-xs font-normal text-ink-3">
+                {picked.length} picked · order = click order
               </span>
             </legend>
             {questions.isPending ? (
@@ -155,29 +174,28 @@ function QuizBuilder({ open, onClose }: { open: boolean; onClose: () => void }) 
             ) : questions.isError ? (
               <ErrorState error={questions.error} onRetry={() => void questions.refetch()} />
             ) : questions.data.items.length === 0 ? (
-              <p className="text-sm text-ink-muted">No approved questions in this topic yet.</p>
+              <p className="text-sm text-ink-3">No approved questions in this topic yet.</p>
             ) : (
-              <ul className="max-h-64 space-y-1 overflow-y-auto rounded-lg border border-line p-2">
+              <ul className="max-h-72 divide-y divide-rule overflow-y-auto rounded border border-rule-strong">
                 {questions.data.items.map((q) => {
                   const pos = picked.indexOf(q.id);
                   return (
                     <li key={q.id}>
                       <label
                         className={cx(
-                          'flex cursor-pointer gap-3 rounded-md p-2 text-sm',
-                          pos >= 0 ? 'bg-brand-50' : 'hover:bg-slate-50',
+                          'flex cursor-pointer items-start gap-3 px-3 py-2.5 text-sm',
+                          pos >= 0 ? 'bg-pencil-soft' : 'hover:bg-paper',
                         )}
                       >
                         <input
                           type="checkbox"
                           checked={pos >= 0}
                           onChange={() => toggle(q.id)}
-                          className="mt-0.5 h-4 w-4 accent-brand-600"
+                          className="mt-1 h-4 w-4 accent-ink"
                         />
-                        <span className="flex-1 text-ink">{q.body}</span>
-                        <span className="whitespace-nowrap text-xs text-ink-faint">
-                          L{q.difficulty}
-                          {pos >= 0 ? ` · #${pos + 1}` : ''}
+                        <span className="flex-1">{q.body}</span>
+                        <span className="w-10 shrink-0 text-right font-mono text-xs text-ink-3">
+                          {pos >= 0 ? `#${pos + 1}` : `L${q.difficulty}`}
                         </span>
                       </label>
                     </li>
@@ -187,9 +205,9 @@ function QuizBuilder({ open, onClose }: { open: boolean; onClose: () => void }) 
             )}
           </fieldset>
         )}
-        {create.isError && <Alert tone="danger">{errorMessage(create.error)}</Alert>}
+        {create.isError && <Alert tone="wrong">{errorMessage(create.error)}</Alert>}
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="secondary" onClick={onClose}>
+          <Button type="button" variant="quiet" onClick={onClose}>
             Cancel
           </Button>
           <Button
@@ -243,12 +261,13 @@ function AssignModal({ quiz, onClose }: { quiz: QuizDto; onClose: () => void }) 
     e.preventDefault();
     assign.mutate();
   };
+  const radio = 'flex items-start gap-2.5 text-sm';
 
   return (
     <Modal title={`Assign “${quiz.title}”`} open onClose={onClose}>
       {assign.isSuccess ? (
         <>
-          <Alert tone="success">
+          <Alert tone="right">
             Assigned to {assign.data.studentCount} student
             {assign.data.studentCount === 1 ? '' : 's'}.
           </Alert>
@@ -257,7 +276,7 @@ function AssignModal({ quiz, onClose }: { quiz: QuizDto; onClose: () => void }) 
           </div>
         </>
       ) : (
-        <form className="space-y-4" onSubmit={onSubmit}>
+        <form className="space-y-5" onSubmit={onSubmit}>
           <Select label="Class" value={classId} onChange={(e) => setClassId(e.target.value)}>
             <option value="">Choose a class…</option>
             {classes.data
@@ -275,24 +294,27 @@ function AssignModal({ quiz, onClose }: { quiz: QuizDto; onClose: () => void }) 
             onChange={(e) => setDueAt(e.target.value)}
           />
           <fieldset className="space-y-2">
-            <legend className="mb-1 text-sm font-medium text-ink">Who</legend>
-            <label className="flex items-center gap-2 text-sm">
+            <legend className="mb-1.5 text-sm font-medium">Who gets it</legend>
+            <label className={radio}>
               <input
                 type="radio"
                 checked={everyone}
                 onChange={() => setEveryone(true)}
-                className="accent-brand-600"
-              />{' '}
-              Whole class (including students who join later)
+                className="mt-1 accent-ink"
+              />
+              <span>
+                Whole class
+                <span className="block text-ink-3">Students who join later get it too.</span>
+              </span>
             </label>
-            <label className="flex items-center gap-2 text-sm">
+            <label className={radio}>
               <input
                 type="radio"
                 checked={!everyone}
                 onChange={() => setEveryone(false)}
-                className="accent-brand-600"
-              />{' '}
-              Selected students
+                className="mt-1 accent-ink"
+              />
+              <span>Selected students</span>
             </label>
           </fieldset>
           {!everyone &&
@@ -302,13 +324,13 @@ function AssignModal({ quiz, onClose }: { quiz: QuizDto; onClose: () => void }) 
             ) : roster.isError ? (
               <ErrorState error={roster.error} />
             ) : (
-              <ul className="max-h-48 space-y-1 overflow-y-auto rounded-lg border border-line p-2">
+              <ul className="max-h-48 divide-y divide-rule overflow-y-auto rounded border border-rule-strong">
                 {roster.data.students.map((s) => (
                   <li key={s.studentId}>
-                    <label className="flex items-center gap-2 rounded-md p-1.5 text-sm hover:bg-slate-50">
+                    <label className="flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-paper">
                       <input
                         type="checkbox"
-                        className="accent-brand-600"
+                        className="accent-ink"
                         checked={students.includes(s.studentId)}
                         onChange={() =>
                           setStudents((x) =>
@@ -324,9 +346,9 @@ function AssignModal({ quiz, onClose }: { quiz: QuizDto; onClose: () => void }) 
                 ))}
               </ul>
             ))}
-          {assign.isError && <Alert tone="danger">{errorMessage(assign.error)}</Alert>}
+          {assign.isError && <Alert tone="wrong">{errorMessage(assign.error)}</Alert>}
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="secondary" onClick={onClose}>
+            <Button type="button" variant="quiet" onClick={onClose}>
               Cancel
             </Button>
             <Button
