@@ -37,6 +37,51 @@ Full-Stack Engineer role. Approved build plan: `~/.claude/plans/see-there-is-one
 - Web UI uses only components from `apps/web/src/components/ui.tsx` (design system, NFR-1).
   Every page needs loading, empty and error states (NFR-2).
 
+## System design rule: build for more users (ALWAYS APPLY)
+
+Every feature, endpoint, query or job must be designed so it keeps working when users grow from
+30 students to many schools (target: 100k+ students, thousands at once, as in a full class logging
+in at 9:00). Before writing code, ask: _what happens at 100× the data and 100× the traffic?_ In the
+plan or PR, state the expected load and how the design copes.
+
+**Principles**
+
+- **Stateless API.** No per-user state in process memory. Sessions are JWTs plus DB/Redis, so any
+  number of API instances can sit behind a load balancer. Shared state (rate limits, caches,
+  locks) goes in Redis or Postgres, never in a module variable.
+- **Every list is paginated** (`paginationSchema`, max 100). No unbounded `findMany` on tables that grow.
+- **Every query uses an index.** A new `where`/`orderBy` column needs an `@@index` in
+  `schema.prisma`. Avoid `OFFSET` on large tables; prefer keyset (cursor) pagination for feeds and logs.
+- **No N+1.** Batch with `include`/`in` or `groupBy`; never query inside a loop over rows.
+- **Precompute what's read often.** Values read much more than written (mastery, class summary)
+  are stored or cached, not recalculated on every request. Caches need a TTL and an explicit
+  invalidation point.
+- **Slow or external work goes off the request path.** LLM calls, emails and exports run with
+  timeouts, retries with backoff, and a queue (BullMQ on Redis) when they don't need an instant
+  answer. Every external call has a timeout and a graceful fallback (NFR-10).
+- **Idempotent and concurrency-safe writes.** Use conditional updates and unique constraints, as
+  `submitAnswer` and refresh-token rotation already do, so retries and double clicks are safe.
+- **Bounded resources.** Rate limits per user and IP; caps on body size, page size, LLM tokens
+  and per-user daily AI usage (AI-5); DB connection pool sized per instance (use PgBouncer when
+  instances × pool > Postgres `max_connections`).
+- **Fast-growing tables are append-only and time-indexed** (`attempts`, `audit_logs`, `ai_calls`),
+  so they can be partitioned by month or archived later without code changes.
+- **Measure before optimising.** Keep the k6 test (TST-10) honest: p95 < 300 ms for non-AI
+  endpoints at 100 concurrent users (NFR-7). Logs carry request IDs so slow paths can be traced.
+
+**Known bottlenecks in the current code (fix before real scale; don't add more like them)**
+
+| Where                                                                 | Issue at scale                                                               | Planned fix                                                               |
+| --------------------------------------------------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `services/audit.ts` `recordAudit`                                     | One global advisory lock serialises every audited write (every login).       | Chain per day or per actor shard, or write via a queue with one consumer  |
+| `middleware/auth.ts` `authenticate`                                   | One DB read per request to re-check role and disabled.                       | Cache `{role, disabled}` in Redis (TTL ~60 s); invalidate on admin change |
+| `services/practice.ts` `pickAdaptiveQuestion`                         | `count` + random `skip` is an OFFSET scan; slow on a large question bank.    | Random pick by indexed random key or a precomputed per-level ID pool      |
+| `services/classes.ts` `classSummary`                                  | Several `groupBy` queries on every dashboard load.                           | Cache per class (short TTL) or maintain summary counters on answer        |
+| `services/quizzes.ts` `listAssignments`, `listClasses`, `listQuizzes` | Not paginated (teacher view capped at 100).                                  | Add pagination like the other list endpoints                              |
+| `services/audit.ts` `listAudit`, `progress.listAttempts`              | OFFSET pagination on the fastest-growing tables.                             | Keyset pagination on `seq` / `(created_at, id)`                           |
+| `infra/api.Dockerfile` CMD                                            | Migrations and seed run on every container start; races with many replicas.  | Separate one-off migrate job in deploy (OPS-9); no seed in production     |
+| `middleware/rateLimit.ts`                                             | Falls back to in-memory limits when Redis is missing, which is per instance. | Require `REDIS_URL` when `NODE_ENV=production`                            |
+
 ## Demo accounts (after seeding)
 
 Password for every account: `LearnLoop!2026`. `admin@learnloop.dev`, `teacher1@learnloop.dev`,
@@ -103,6 +148,10 @@ self-hosted. Corners are small, rules replace shadows, and lists replace card gr
    - `apps/mcp-server`: official MCP TS SDK, 6 tools calling the REST API with a scoped token (AI-10..14);
      confirmation/draft for create_quiz and assign_practice; README connection guide.
    - Tests: TST-5 (≥20 malformed/hostile outputs), TST-6 (≥10 injection cases), TST-7 (MCP contract tests).
+   - Scale (see the system design rule): cache explanations by `(questionId, normalised wrong answer)`
+     in Redis/Postgres so repeated mistakes cost zero LLM calls; run question generation as a
+     BullMQ job (teacher polls or gets the drafts when ready); enforce per-user daily caps in Redis;
+     the free Gemini tier is rate-limited, so queue and back off instead of failing requests.
    - Get a free Gemini key at https://aistudio.google.com and check the current free model name.
 2. **Week 4**: Playwright E2E + axe (TST-4, TST-9), k6 (TST-10), deploy (Vercel + Render), demo video, release tags.
 3. Optional polish: verify 360 px layouts in a real browser.
