@@ -1,0 +1,338 @@
+// LearnLoop data model (SRS section 8.1, DATA-1..DATA-11).
+// Every lookup column has an index; every relation has a foreign key.
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  student
+  teacher
+  admin
+}
+
+enum QuestionType {
+  multiple_choice
+  numeric
+}
+
+enum QuestionStatus {
+  draft
+  approved
+  retired
+}
+
+enum ContentSource {
+  human
+  ai
+}
+
+enum QuizStatus {
+  draft
+  published
+}
+
+// DATA-1
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  role         Role     @default(student)
+  displayName  String   @map("display_name")
+  disabled     Boolean  @default(false)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  classesTaught  Class[]
+  enrollments    Enrollment[]
+  quizzes        Quiz[]
+  attempts       Attempt[]
+  mastery        Mastery[]
+  sessions       PracticeSession[]
+  refreshTokens  RefreshToken[]
+  resetTokens    PasswordResetToken[]
+  assignTargets  AssignmentTarget[]
+  aiCalls        AiCall[]
+
+  @@index([role])
+  @@map("users")
+}
+
+// Supports SEC-2: rotating refresh tokens grouped in families so reuse revokes the family.
+model RefreshToken {
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @map("user_id") @db.Uuid
+  familyId   String    @map("family_id") @db.Uuid
+  tokenHash  String    @unique @map("token_hash")
+  expiresAt  DateTime  @map("expires_at")
+  revokedAt  DateTime? @map("revoked_at")
+  replacedBy String?   @map("replaced_by") @db.Uuid
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([familyId])
+  @@map("refresh_tokens")
+}
+
+// Supports FR-4: single-use, time-limited reset links. Only the hash is stored.
+model PasswordResetToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("password_reset_tokens")
+}
+
+// DATA-2
+model Class {
+  id        String   @id @default(uuid()) @db.Uuid
+  teacherId String   @map("teacher_id") @db.Uuid
+  name      String
+  joinCode  String   @unique @map("join_code")
+  archived  Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  teacher     User         @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  enrollments Enrollment[]
+  assignments Assignment[]
+
+  @@index([teacherId])
+  @@map("classes")
+}
+
+// DATA-3
+model Enrollment {
+  classId   String   @map("class_id") @db.Uuid
+  studentId String   @map("student_id") @db.Uuid
+  joinedAt  DateTime @default(now()) @map("joined_at")
+
+  class   Class @relation(fields: [classId], references: [id], onDelete: Cascade)
+  student User  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@id([classId, studentId])
+  @@index([studentId])
+  @@map("enrollments")
+}
+
+// DATA-4
+model Topic {
+  id         String @id @default(uuid()) @db.Uuid
+  name       String @unique
+  gradeLevel Int    @map("grade_level")
+
+  questions Question[]
+  quizzes   Quiz[]
+  mastery   Mastery[]
+  sessions  PracticeSession[]
+
+  @@map("topics")
+}
+
+// DATA-5
+model Question {
+  id            String         @id @default(uuid()) @db.Uuid
+  topicId       String         @map("topic_id") @db.Uuid
+  difficulty    Int
+  type          QuestionType
+  body          String
+  options       Json?
+  correctAnswer String         @map("correct_answer")
+  explanation   String
+  status        QuestionStatus @default(draft)
+  source        ContentSource  @default(human)
+  createdById   String?        @map("created_by_id") @db.Uuid
+  createdAt     DateTime       @default(now()) @map("created_at")
+
+  topic         Topic          @relation(fields: [topicId], references: [id])
+  attempts      Attempt[]
+  quizQuestions QuizQuestion[]
+
+  @@index([topicId, difficulty, status])
+  @@index([status])
+  @@map("questions")
+}
+
+// DATA-6
+model Quiz {
+  id        String     @id @default(uuid()) @db.Uuid
+  ownerId   String     @map("owner_id") @db.Uuid
+  title     String
+  topicId   String     @map("topic_id") @db.Uuid
+  status    QuizStatus @default(draft)
+  createdAt DateTime   @default(now()) @map("created_at")
+
+  owner       User           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  topic       Topic          @relation(fields: [topicId], references: [id])
+  questions   QuizQuestion[]
+  assignments Assignment[]
+
+  @@index([ownerId])
+  @@map("quizzes")
+}
+
+// "Holds ordered questions" (DATA-6 notes).
+model QuizQuestion {
+  quizId     String @map("quiz_id") @db.Uuid
+  questionId String @map("question_id") @db.Uuid
+  position   Int
+
+  quiz     Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  question Question @relation(fields: [questionId], references: [id])
+
+  @@id([quizId, questionId])
+  @@unique([quizId, position])
+  @@map("quiz_questions")
+}
+
+// DATA-7
+model Assignment {
+  id        String   @id @default(uuid()) @db.Uuid
+  quizId    String   @map("quiz_id") @db.Uuid
+  classId   String   @map("class_id") @db.Uuid
+  dueAt     DateTime @map("due_at")
+  // True when assigned to the whole class, so students who join later receive it too.
+  wholeClass Boolean @default(true) @map("whole_class")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  quiz     Quiz               @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  class    Class              @relation(fields: [classId], references: [id], onDelete: Cascade)
+  targets  AssignmentTarget[]
+  sessions PracticeSession[]
+
+  @@index([classId])
+  @@index([quizId])
+  @@map("assignments")
+}
+
+// "Optional per-student targets" (DATA-7 notes). Rows exist for every targeted
+// student, so completion is a simple count.
+model AssignmentTarget {
+  assignmentId String    @map("assignment_id") @db.Uuid
+  studentId    String    @map("student_id") @db.Uuid
+  completedAt  DateTime? @map("completed_at")
+
+  assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  student    User       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@id([assignmentId, studentId])
+  @@index([studentId])
+  @@map("assignment_targets")
+}
+
+// Supports FR-11, FR-16: session state lives in the DB so a student can resume.
+model PracticeSession {
+  id                String    @id @default(uuid()) @db.Uuid
+  studentId         String    @map("student_id") @db.Uuid
+  topicId           String    @map("topic_id") @db.Uuid
+  assignmentId      String?   @map("assignment_id") @db.Uuid
+  currentDifficulty Int       @map("current_difficulty")
+  currentQuestionId String?   @map("current_question_id") @db.Uuid
+  // Consecutive results at the current difficulty: +n correct, -n wrong (FR-12).
+  streak            Int       @default(0)
+  totalQuestions    Int       @map("total_questions")
+  answeredCount     Int       @default(0) @map("answered_count")
+  correctCount      Int       @default(0) @map("correct_count")
+  startedAt         DateTime  @default(now()) @map("started_at")
+  completedAt       DateTime? @map("completed_at")
+
+  student    User        @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  topic      Topic       @relation(fields: [topicId], references: [id])
+  assignment Assignment? @relation(fields: [assignmentId], references: [id], onDelete: SetNull)
+  attempts   Attempt[]
+
+  @@index([studentId, completedAt])
+  @@index([assignmentId])
+  @@map("practice_sessions")
+}
+
+// DATA-8
+model Attempt {
+  id         String   @id @default(uuid()) @db.Uuid
+  studentId  String   @map("student_id") @db.Uuid
+  questionId String   @map("question_id") @db.Uuid
+  sessionId  String?  @map("session_id") @db.Uuid
+  answer     String
+  correct    Boolean
+  difficulty Int
+  timeMs     Int      @map("time_ms")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  student  User             @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  question Question         @relation(fields: [questionId], references: [id])
+  session  PracticeSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+
+  @@index([studentId, createdAt])
+  @@index([sessionId])
+  @@index([questionId])
+  @@map("attempts")
+}
+
+// DATA-9
+model Mastery {
+  studentId String   @map("student_id") @db.Uuid
+  topicId   String   @map("topic_id") @db.Uuid
+  score     Float    @default(0)
+  attempts  Int      @default(0)
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  student User  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  topic   Topic @relation(fields: [topicId], references: [id])
+
+  @@id([studentId, topicId])
+  @@index([topicId])
+  @@map("mastery")
+}
+
+// DATA-10: append-only and hash-chained (SEC-14). Never updated or deleted by the app.
+// actor_id is deliberately not a foreign key: deleting a user must not rewrite history.
+model AuditLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  seq       Int      @unique @default(autoincrement())
+  actorId   String?  @map("actor_id") @db.Uuid
+  action    String
+  target    String?
+  metadata  Json     @default("{}")
+  prevHash  String   @map("prev_hash")
+  hash      String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([actorId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// DATA-11: metadata only, no raw student text (AI-24).
+model AiCall {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String?  @map("user_id") @db.Uuid
+  purpose   String
+  provider  String
+  model     String
+  tokensIn  Int      @map("tokens_in")
+  tokensOut Int      @map("tokens_out")
+  cost      Float    @default(0)
+  latencyMs Int      @map("latency_ms")
+  success   Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([createdAt])
+  @@map("ai_calls")
+}
