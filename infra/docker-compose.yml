@@ -1,0 +1,81 @@
+# Full local stack (OPS-2, NFR-13): docker compose -f infra/docker-compose.yml up --build
+# Web on http://localhost:8080 (nginx proxies /api to the API).
+name: learnloop
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: learnloop
+      POSTGRES_PASSWORD: learnloop
+      POSTGRES_DB: learnloop
+    ports: ['5432:5432']
+    volumes: ['pgdata:/var/lib/postgresql/data']
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U learnloop']
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    ports: ['6379:6379']
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build:
+      context: ..
+      dockerfile: infra/api.Dockerfile
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: postgresql://learnloop:learnloop@postgres:5432/learnloop
+      REDIS_URL: redis://redis:6379
+      # Local demo only. Real deployments inject this from a secret manager (SEC-9).
+      JWT_SECRET: ${JWT_SECRET:-local-demo-secret-change-me-0123456789abcdef}
+      CORS_ORIGINS: http://localhost:8080
+      APP_URL: http://localhost:8080
+      COOKIE_SECURE: 'false'
+      AI_PROVIDER: ${AI_PROVIDER:-mock}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://localhost:4000/api/v1/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    # Not published on the host: the web container reaches it on the compose network.
+    expose: ['4000']
+
+  web:
+    build:
+      context: ..
+      dockerfile: infra/web.Dockerfile
+    depends_on:
+      api: { condition: service_healthy }
+    ports: ['8080:8080']
+
+  mcp-server:
+    build:
+      context: ..
+      dockerfile: infra/mcp.Dockerfile
+    environment:
+      LEARNLOOP_API_URL: http://api:4000/api/v1
+    depends_on:
+      api: { condition: service_healthy }
+
+volumes:
+  pgdata:
