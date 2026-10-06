@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { useUser, useAuth } from '../lib/auth';
+import { useAuth, useUser } from '../lib/auth';
 import { cx } from './ui';
 
 const NAV = {
   student: [
-    { to: '/student', label: 'Home', end: true },
+    { to: '/student', label: 'Practice', end: true },
     { to: '/student/progress', label: 'Progress' },
   ],
   teacher: [
@@ -19,14 +19,33 @@ const NAV = {
   ],
 } as const;
 
-export function Logo() {
+/** The wordmark: an arc landing on a dot, a loop closing on the next question. */
+export function Logo({ className }: { className?: string }) {
   return (
-    <span className="flex items-center gap-2 font-semibold tracking-tight text-ink">
-      <img src="/favicon.svg" alt="" className="h-7 w-7" />
-      LearnLoop
+    <span className={cx('flex items-center gap-2', className)}>
+      <svg viewBox="0 0 32 32" className="h-6 w-6" aria-hidden="true">
+        <rect width="32" height="32" rx="6" fill="#1C1B17" />
+        <path
+          d="M9 20.5c0-4.7 3.1-8.5 7-8.5s7 3.8 7 8.5"
+          fill="none"
+          stroke="#F6F4EE"
+          strokeWidth="2.6"
+          strokeLinecap="round"
+        />
+        <circle cx="16" cy="21" r="3" fill="#F2C230" />
+      </svg>
+      <span className="font-serif text-lg font-semibold tracking-tight">LearnLoop</span>
     </span>
   );
 }
+
+const initials = (name: string) =>
+  name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase())
+    .join('');
 
 export function Layout() {
   const user = useUser();
@@ -35,60 +54,79 @@ export function Layout() {
   const [open, setOpen] = useState(false);
   const links = NAV[user.role];
 
-  const linkClass = ({ isActive }: { isActive: boolean }) =>
+  const signOut = async () => {
+    await logout();
+    navigate('/login');
+  };
+
+  // Active tab: ink text with a pencil underline, like a highlighted heading.
+  const desktopLink = ({ isActive }: { isActive: boolean }) =>
     cx(
-      'rounded-lg px-3 py-2 text-sm font-medium',
-      isActive ? 'bg-brand-50 text-brand-700' : 'text-ink-muted hover:bg-slate-100 hover:text-ink',
+      'relative flex h-14 items-center px-1 text-sm transition-colors',
+      isActive
+        ? 'font-medium text-ink after:absolute after:inset-x-0 after:bottom-0 after:h-[3px] after:bg-pencil'
+        : 'text-ink-2 hover:text-ink',
+    );
+  const mobileLink = ({ isActive }: { isActive: boolean }) =>
+    cx(
+      'block rounded px-3 py-2.5',
+      isActive ? 'bg-pencil-soft font-medium' : 'text-ink-2 hover:bg-paper-sunken',
     );
 
   return (
     <div className="min-h-screen">
       <a
         href="#main"
-        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-white focus:px-3 focus:py-2"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-3 focus:z-50 focus:rounded focus:bg-ink focus:px-3 focus:py-2 focus:text-white"
       >
         Skip to content
       </a>
-      <header className="sticky top-0 z-40 border-b border-line bg-white/90 backdrop-blur">
-        <div className="mx-auto flex h-16 max-w-6xl items-center gap-4 px-4">
+      <header className="border-b border-rule bg-paper">
+        <div className="mx-auto flex h-14 max-w-6xl items-center gap-8 px-4 sm:px-6">
           <Link to="/" aria-label="LearnLoop home">
             <Logo />
           </Link>
-          <nav aria-label="Main" className="ml-4 hidden gap-1 md:flex">
+          <nav aria-label="Main" className="hidden gap-6 md:flex">
             {links.map((l) => (
-              <NavLink key={l.to} to={l.to} end={'end' in l} className={linkClass}>
+              <NavLink key={l.to} to={l.to} end={'end' in l} className={desktopLink}>
                 {l.label}
               </NavLink>
             ))}
           </nav>
-          <div className="ml-auto hidden items-center gap-3 md:flex">
-            <Link to="/profile" className="text-sm text-ink-muted hover:text-ink">
-              {user.displayName} <span className="text-ink-faint">· {user.role}</span>
-            </Link>
-            <button
-              type="button"
-              className="rounded-lg px-3 py-2 text-sm font-medium text-ink-muted hover:bg-slate-100"
-              onClick={async () => {
-                await logout();
-                navigate('/login');
-              }}
+          <div className="ml-auto hidden items-center gap-4 md:flex">
+            <Link
+              to="/profile"
+              className="flex items-center gap-2 text-sm text-ink-2 hover:text-ink"
             >
+              <span
+                aria-hidden="true"
+                className="flex h-7 w-7 items-center justify-center rounded-full border border-rule-strong bg-paper-raised font-mono text-2xs font-medium text-ink"
+              >
+                {initials(user.displayName)}
+              </span>
+              <span>
+                {user.displayName}
+                <span className="sr-only">, {user.role}. Profile</span>
+              </span>
+            </Link>
+            <span className="h-4 w-px bg-rule-strong" aria-hidden="true" />
+            <button type="button" className="text-sm text-ink-2 hover:text-ink" onClick={signOut}>
               Log out
             </button>
           </div>
           <button
             type="button"
-            className="ml-auto rounded-lg p-2 text-ink md:hidden"
+            className="-mr-2 ml-auto rounded p-2 md:hidden"
             aria-expanded={open}
             aria-controls="mobile-nav"
             aria-label={open ? 'Close menu' : 'Open menu'}
             onClick={() => setOpen((o) => !o)}
           >
-            <svg viewBox="0 0 24 24" className="h-6 w-6" aria-hidden="true">
+            <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
               <path
-                d={open ? 'M6 6l12 12M18 6L6 18' : 'M4 7h16M4 12h16M4 17h16'}
+                d={open ? 'M6 6l12 12M18 6L6 18' : 'M4 8h16M4 16h16'}
                 stroke="currentColor"
-                strokeWidth="2"
+                strokeWidth="1.8"
                 strokeLinecap="round"
               />
             </svg>
@@ -98,30 +136,27 @@ export function Layout() {
           <nav
             id="mobile-nav"
             aria-label="Main"
-            className="border-t border-line px-4 py-3 md:hidden"
+            className="border-t border-rule px-4 py-3 md:hidden"
           >
-            <div className="flex flex-col gap-1">
-              {links.map((l) => (
-                <NavLink
-                  key={l.to}
-                  to={l.to}
-                  end={'end' in l}
-                  className={linkClass}
-                  onClick={() => setOpen(false)}
-                >
-                  {l.label}
-                </NavLink>
-              ))}
-              <NavLink to="/profile" className={linkClass} onClick={() => setOpen(false)}>
-                Profile
+            {links.map((l) => (
+              <NavLink
+                key={l.to}
+                to={l.to}
+                end={'end' in l}
+                className={mobileLink}
+                onClick={() => setOpen(false)}
+              >
+                {l.label}
+              </NavLink>
+            ))}
+            <div className="mt-2 border-t border-rule pt-2">
+              <NavLink to="/profile" className={mobileLink} onClick={() => setOpen(false)}>
+                {user.displayName} · profile
               </NavLink>
               <button
                 type="button"
-                className="rounded-lg px-3 py-2 text-left text-sm font-medium text-ink-muted hover:bg-slate-100"
-                onClick={async () => {
-                  await logout();
-                  navigate('/login');
-                }}
+                className="block w-full rounded px-3 py-2.5 text-left text-ink-2 hover:bg-paper-sunken"
+                onClick={signOut}
               >
                 Log out
               </button>
@@ -129,7 +164,7 @@ export function Layout() {
           </nav>
         )}
       </header>
-      <main id="main" className="mx-auto max-w-6xl px-4 py-8">
+      <main id="main" className="mx-auto max-w-6xl px-4 pb-16 pt-8 sm:px-6">
         <Outlet />
       </main>
     </div>
