@@ -71,6 +71,25 @@ Password for every account: `LearnLoop!2026`. `admin@learnloop.dev`, `teacher1@l
 - Git: repo initialised on `main` with 13 logical commits (nothing pushed; no remote yet).
 - `deepmerge-ts` overridden to ^8 in the root package.json to clear a Prisma high-severity advisory.
 
+## UI redesign: DONE (2026-10-06)
+
+The web UI was redesigned so it doesn't read as AI-generated. Rules and tokens live in
+`docs/design.md`: an exercise-book look with paper, ink, a pencil-yellow highlight, and
+`correct`/`incorrect` colours used only for marking. Fonts are Source Serif 4 and IBM Plex Sans/Mono,
+self-hosted. Corners are small, rules replace shadows, and lists replace card grids.
+
+- The Tailwind palette is **replaced**: only `paper`, `ink`, `rule`, `pencil`, `correct`, `incorrect` exist.
+  Never name a colour after a utility (`right` clashed with `text-right`).
+- Components (`components/ui.tsx`): Panel, PanelHeader, PageHeader(eyebrow), SectionTitle, StatStrip,
+  Tag, Status, Meter, Alert, Code, TextArea. Component `tone` props still use the values `right`/`wrong`/`pencil`;
+  they map to the `correct`/`incorrect`/`pencil` colour classes inside `ui.tsx`.
+- Checked at 360 and 390 px with a Playwright script (scratchpad, not committed). All 11 pages
+  have no horizontal overflow. Fixed a bug where sr-only text inside tables widened the page
+  (`TableWrap` is now `relative`). Port this check into Week 4 E2E (TST-4/NFR-4).
+- The Docker login rate limit (20 per IP / 10 per account per 15 min) trips during repeated
+  browser checks. Clear local counters with:
+  `docker exec learnloop-redis-1 sh -c "redis-cli --scan --pattern 'rl:*' | xargs -r redis-cli del"`
+
 ## Next steps
 
 1. **Week 3, AI + MCP** (start here next session):
