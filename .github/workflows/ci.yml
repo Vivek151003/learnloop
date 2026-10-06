@@ -1,0 +1,103 @@
+# OPS-3, OPS-4 (partial), OPS-6, TST-8: runs on every pull request and on main.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Lint, typecheck, test, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: learnloop
+          POSTGRES_PASSWORD: learnloop
+          POSTGRES_DB: learnloop_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U learnloop" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgresql://learnloop:learnloop@localhost:5432/learnloop_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run format:check
+      - run: npm run lint
+      - run: npm run typecheck
+      - name: Tests with coverage
+        run: |
+          npm run build -w @learnloop/shared
+          npm test -w @learnloop/shared
+          npm run test:coverage -w @learnloop/api
+          npm test -w @learnloop/web
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-coverage
+          path: apps/api/coverage
+      - run: npm run build
+
+  dependencies:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      # High and critical findings fail the build (SEC-11).
+      - run: npm audit --omit=dev --audit-level=high
+
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  images:
+    name: Build and scan images
+    runs-on: ubuntu-latest
+    needs: check
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build images
+        run: |
+          docker build -f infra/api.Dockerfile -t learnloop-api:ci .
+          docker build -f infra/web.Dockerfile -t learnloop-web:ci .
+      # SEC-12: images are scanned before release; high and critical findings fail.
+      - name: Trivy scan (api)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: learnloop-api:ci
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+      - name: Trivy scan (web)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: learnloop-web:ci
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
