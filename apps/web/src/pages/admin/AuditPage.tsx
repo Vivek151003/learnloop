@@ -1,26 +1,27 @@
 import { useState } from 'react';
 import { keepPreviousData, useMutation, useQuery } from '@tanstack/react-query';
+import { ScrollText, ShieldCheck } from 'lucide-react';
 import type { AuditLogDto, Paginated } from '@learnloop/shared';
 import {
   Alert,
+  Badge,
   Button,
+  Card,
   EmptyState,
   ErrorState,
+  FilterSelect,
   LoadingBlock,
   PageHeader,
   Pager,
-  Panel,
-  Select,
   TableWrap,
   Td,
   Th,
-  cx,
 } from '../../components/ui';
 import { api, errorMessage, qs } from '../../lib/api';
 import { dateTime } from '../../lib/format';
 
 const ACTION_GROUPS = [
-  { value: '', label: 'Everything' },
+  { value: '', label: 'All activity' },
   { value: 'auth.', label: 'Sign-ins and sessions' },
   { value: 'user.', label: 'User changes' },
   { value: 'class.', label: 'Classes' },
@@ -29,7 +30,12 @@ const ACTION_GROUPS = [
   { value: 'assignment.', label: 'Assignments' },
 ];
 
-const isAlarming = (action: string) => /failed|reuse|disabled|deleted/.test(action);
+const tone = (action: string) =>
+  /failed|reuse|disabled|deleted/.test(action)
+    ? 'danger'
+    : action.startsWith('auth.')
+      ? 'neutral'
+      : 'brand';
 
 /** FR-41: the tamper-evident audit log, with a chain integrity check. */
 export default function AuditPage() {
@@ -49,100 +55,110 @@ export default function AuditPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Administration"
         title="Audit log"
-        subtitle="Append-only. Each entry stores a hash of the one before it, so an edit anywhere breaks the chain."
+        description="Append-only. Each entry includes a hash of the one before it, so any edit breaks the chain."
         actions={
-          <Button variant="secondary" loading={verify.isPending} onClick={() => verify.mutate()}>
-            Verify chain
+          <Button
+            variant="secondary"
+            icon={ShieldCheck}
+            loading={verify.isPending}
+            onClick={() => verify.mutate()}
+          >
+            Verify integrity
           </Button>
         }
       />
       {verify.isError && (
         <div className="mb-4">
-          <Alert tone="wrong">{errorMessage(verify.error)}</Alert>
+          <Alert tone="danger">{errorMessage(verify.error)}</Alert>
         </div>
       )}
       {verify.data && (
         <div className="mb-4">
           {verify.data.valid ? (
-            <Alert tone="right">Chain intact: {verify.data.checked} entries checked.</Alert>
+            <Alert tone="success">
+              Chain intact. All {verify.data.checked} entries were verified.
+            </Alert>
           ) : (
-            <Alert tone="wrong">
-              Chain broken at entry #{verify.data.brokenAtSeq}. Rows have been altered outside the
-              app.
+            <Alert tone="danger">
+              Chain broken at entry #{verify.data.brokenAtSeq}. Rows were changed outside the app.
             </Alert>
           )}
         </div>
       )}
-      <div className="mb-4 max-w-xs">
-        <Select
-          label="Show"
-          value={action}
-          onChange={(e) => {
-            setAction(e.target.value);
-            setPage(1);
-          }}
-        >
-          {ACTION_GROUPS.map((g) => (
-            <option key={g.value} value={g.value}>
-              {g.label}
-            </option>
-          ))}
-        </Select>
-      </div>
-      {list.isError ? (
-        <ErrorState error={list.error} onRetry={() => void list.refetch()} />
-      ) : list.isPending ? (
-        <LoadingBlock />
-      ) : list.data.items.length === 0 ? (
-        <EmptyState
-          title="No entries"
-          description="Nothing has been recorded for this filter yet."
-        />
-      ) : (
-        <Panel>
-          <TableWrap minWidth={760}>
-            <thead>
-              <tr>
-                <Th>When</Th>
-                <Th>Actor</Th>
-                <Th>Action</Th>
-                <Th>Target</Th>
-                <Th>Details</Th>
-              </tr>
-            </thead>
-            <tbody className="font-mono text-xs">
-              {list.data.items.map((e) => (
-                <tr key={e.id}>
-                  <Td className="whitespace-nowrap text-ink-3">{dateTime(e.createdAt)}</Td>
-                  <Td className="text-ink-2">
-                    {e.actorEmail ?? (e.actorId ? 'deleted user' : 'anonymous')}
-                  </Td>
-                  <Td
-                    className={cx(
-                      'whitespace-nowrap font-medium',
-                      isAlarming(e.action) ? 'text-incorrect' : 'text-ink',
-                    )}
-                  >
-                    {e.action}
-                  </Td>
-                  <Td className="text-ink-3">{e.target ?? '—'}</Td>
-                  <Td className="max-w-xs break-all text-ink-3">
-                    {Object.keys(e.metadata).length ? JSON.stringify(e.metadata) : '—'}
-                  </Td>
-                </tr>
-              ))}
-            </tbody>
-          </TableWrap>
-          <Pager
-            page={list.data.page}
-            pageSize={list.data.pageSize}
-            total={list.data.total}
-            onPage={setPage}
+      <Card>
+        <div className="flex flex-wrap items-center gap-3 border-b border-gray-200 px-5 py-3">
+          <FilterSelect
+            label="Filter by activity"
+            value={action}
+            onChange={(e) => {
+              setAction(e.target.value);
+              setPage(1);
+            }}
+          >
+            {ACTION_GROUPS.map((g) => (
+              <option key={g.value} value={g.value}>
+                {g.label}
+              </option>
+            ))}
+          </FilterSelect>
+          {list.data && (
+            <span className="ml-auto text-sm text-gray-500">{list.data.total} entries</span>
+          )}
+        </div>
+        {list.isError ? (
+          <div className="p-5">
+            <ErrorState error={list.error} onRetry={() => void list.refetch()} />
+          </div>
+        ) : list.isPending ? (
+          <div className="p-5">
+            <LoadingBlock />
+          </div>
+        ) : list.data.items.length === 0 ? (
+          <EmptyState
+            icon={ScrollText}
+            title="No entries"
+            description="Nothing has been recorded for this filter yet."
           />
-        </Panel>
-      )}
+        ) : (
+          <>
+            <TableWrap minWidth={780}>
+              <thead>
+                <tr>
+                  <Th>Time</Th>
+                  <Th>Actor</Th>
+                  <Th>Action</Th>
+                  <Th>Target</Th>
+                  <Th>Details</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {list.data.items.map((e) => (
+                  <tr key={e.id} className="hover:bg-gray-50">
+                    <Td className="whitespace-nowrap text-gray-500">{dateTime(e.createdAt)}</Td>
+                    <Td className="text-gray-700">
+                      {e.actorEmail ?? (e.actorId ? 'Deleted user' : 'Anonymous')}
+                    </Td>
+                    <Td>
+                      <Badge tone={tone(e.action)}>{e.action}</Badge>
+                    </Td>
+                    <Td className="font-mono text-xs text-gray-500">{e.target ?? '–'}</Td>
+                    <Td className="max-w-xs break-all font-mono text-xs text-gray-500">
+                      {Object.keys(e.metadata).length ? JSON.stringify(e.metadata) : '–'}
+                    </Td>
+                  </tr>
+                ))}
+              </tbody>
+            </TableWrap>
+            <Pager
+              page={list.data.page}
+              pageSize={list.data.pageSize}
+              total={list.data.total}
+              onPage={setPage}
+            />
+          </>
+        )}
+      </Card>
     </>
   );
 }

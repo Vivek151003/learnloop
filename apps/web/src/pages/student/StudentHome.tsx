@@ -1,6 +1,16 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  CalendarClock,
+  CheckCheck,
+  CircleCheck,
+  Flame,
+  Inbox,
+  Play,
+  Target,
+  UserPlus,
+} from 'lucide-react';
 import type {
   AssignmentDto,
   ClassDto,
@@ -11,21 +21,23 @@ import type {
 } from '@learnloop/shared';
 import {
   Alert,
+  Avatar,
+  Badge,
   Button,
+  Card,
+  CardHeader,
   EmptyState,
   ErrorState,
   Input,
   LoadingBlock,
-  Meter,
   PageHeader,
-  Panel,
-  PanelHeader,
-  SectionTitle,
-  Status,
+  ProgressBar,
+  StatCard,
 } from '../../components/ui';
+import { useToast } from '../../components/toast';
 import { api, errorMessage } from '../../lib/api';
 import { useUser } from '../../lib/auth';
-import { DIFFICULTY_LABELS, dueLabel, pct } from '../../lib/format';
+import { dueLabel, pct } from '../../lib/format';
 
 export function useStartSession() {
   const navigate = useNavigate();
@@ -40,9 +52,6 @@ export function useStartSession() {
   });
 }
 
-const today = () =>
-  new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
-
 export function StudentHome() {
   const user = useUser();
   const start = useStartSession();
@@ -51,83 +60,97 @@ export function StudentHome() {
     queryKey: ['progress', user.id],
     queryFn: () => api.get<ProgressDto>(`/students/${user.id}/progress`),
   });
-
   const mastery = new Map(progress.data?.mastery.map((m) => [m.topicId, m]));
   const p = progress.data;
 
   return (
     <>
       <PageHeader
-        eyebrow={today()}
-        title={`${user.displayName.split(' ')[0]}’s practice`}
-        subtitle={
-          p && p.totalAttempts > 0
-            ? `${p.streakDays}-day streak · ${pct(p.accuracy)} correct across ${p.totalAttempts} questions`
-            : 'Ten questions at a time. They get harder as you get them right.'
-        }
+        title={`Hi, ${user.displayName.split(' ')[0]}`}
+        description="Practise a topic or finish the work your teacher set."
       />
+
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <StatCard
+          label="Day streak"
+          value={p ? p.streakDays : '–'}
+          icon={Flame}
+          tone="warning"
+          hint="Days in a row with practice"
+        />
+        <StatCard
+          label="Accuracy"
+          value={p ? pct(p.accuracy) : '–'}
+          icon={Target}
+          tone="success"
+          hint="Correct answers overall"
+        />
+        <StatCard
+          label="Answered"
+          value={p ? p.totalAttempts : '–'}
+          icon={CheckCheck}
+          hint="Questions in total"
+        />
+      </div>
 
       {start.isError && (
         <div className="mb-6">
-          <Alert tone="wrong">{errorMessage(start.error)}</Alert>
+          <Alert tone="danger">{errorMessage(start.error)}</Alert>
         </div>
       )}
 
-      <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_300px]">
-        <div className="space-y-10">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="space-y-6">
           <UpNext topics={topics.data} mastery={mastery} />
           <Assignments />
+
           <section aria-labelledby="topics-heading">
-            <SectionTitle id="topics-heading" aside="Grades 6–8">
-              Topics
-            </SectionTitle>
+            <h2 id="topics-heading" className="mb-3 text-base font-semibold text-gray-900">
+              Practice by topic
+            </h2>
             {topics.isError ? (
               <ErrorState error={topics.error} onRetry={() => void topics.refetch()} />
             ) : topics.isPending ? (
-              <LoadingBlock rows={4} />
+              <LoadingBlock rows={3} />
             ) : (
-              <Panel>
-                <ul className="divide-y divide-rule">
-                  {topics.data.map((t) => {
-                    const m = mastery.get(t.id);
-                    return (
-                      <li key={t.id}>
-                        <button
-                          type="button"
-                          disabled={start.isPending}
-                          onClick={() => start.mutate({ topicId: t.id })}
-                          className="group grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-6 gap-y-2 px-5 py-3.5 text-left transition-colors hover:bg-paper sm:grid-cols-[minmax(0,1fr)_180px_auto] disabled:opacity-60"
-                        >
-                          <span className="min-w-0">
-                            <span className="block font-medium">{t.name}</span>
-                            <span className="font-mono text-xs text-ink-3">
-                              Grade {t.gradeLevel}
-                            </span>
-                          </span>
-                          <span className="col-span-2 row-start-2 flex items-center gap-3 sm:col-span-1 sm:row-start-auto">
-                            <Meter
-                              value={m?.score ?? 0}
-                              label={`${t.name} mastery`}
-                              tone={m && m.score >= 0.7 ? 'right' : 'ink'}
-                            />
-                            <span className="w-10 shrink-0 text-right font-mono text-xs tabular-nums text-ink-2">
-                              {m ? pct(m.score) : '—'}
-                            </span>
-                          </span>
-                          <span className="text-sm text-ink-3 transition-colors group-hover:text-ink">
-                            Practise <span aria-hidden="true">→</span>
-                          </span>
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </Panel>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {topics.data.map((t) => {
+                  const m = mastery.get(t.id);
+                  return (
+                    <button
+                      key={t.id}
+                      type="button"
+                      disabled={start.isPending}
+                      onClick={() => start.mutate({ topicId: t.id })}
+                      className="rounded-lg border border-gray-200 bg-white p-4 text-left shadow-xs transition hover:border-brand-200 hover:shadow-sm disabled:opacity-60"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="font-medium text-gray-900">{t.name}</span>
+                        <Badge>Grade {t.gradeLevel}</Badge>
+                      </div>
+                      <div className="mt-4 flex items-center gap-3">
+                        <ProgressBar
+                          value={m?.score ?? 0}
+                          label={`${t.name} mastery`}
+                          tone={m && m.score >= 0.7 ? 'success' : 'brand'}
+                          size="sm"
+                        />
+                        <span className="w-9 shrink-0 text-right text-xs tabular text-gray-500">
+                          {m ? pct(m.score) : '–'}
+                        </span>
+                      </div>
+                      <p className="mt-2 text-xs text-gray-500">
+                        {m ? `${m.attempts} questions answered` : 'Not started'}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
             )}
           </section>
         </div>
 
-        <aside className="space-y-8">
+        <aside className="space-y-6">
           <JoinClass />
           <MyClasses />
         </aside>
@@ -156,51 +179,52 @@ function UpNext({
   const weakest = topics
     .slice()
     .sort((a, b) => (mastery.get(a.id)?.score ?? -1) - (mastery.get(b.id)?.score ?? -1))[0];
+  if (!open && !weakest) return null;
 
   return (
-    <section
-      aria-label="Up next"
-      className="rounded border border-rule border-l-[3px] border-l-pencil bg-paper-raised"
-    >
-      <div className="flex flex-col gap-5 p-6 sm:flex-row sm:items-center sm:justify-between">
-        {open ? (
-          <div>
-            <p className="eyebrow">Unfinished</p>
-            <p className="mt-1 font-serif text-2xl font-semibold">{open.topicName}</p>
-            <p className="mt-1 text-sm text-ink-2">
-              {open.answeredCount} of {open.totalQuestions} answered · level{' '}
-              {open.currentDifficulty} ({DIFFICULTY_LABELS[open.currentDifficulty]?.toLowerCase()})
-            </p>
-          </div>
-        ) : weakest ? (
-          <div>
-            <p className="eyebrow">Suggested</p>
-            <p className="mt-1 font-serif text-2xl font-semibold">{weakest.name}</p>
-            <p className="mt-1 text-sm text-ink-2">
-              {mastery.has(weakest.id)
-                ? `Your lowest topic at ${pct(mastery.get(weakest.id)!.score)} mastery.`
+    <Card className="p-5">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <Badge tone="brand">{open ? 'In progress' : 'Suggested for you'}</Badge>
+          <p className="mt-2 text-lg font-semibold text-gray-900">
+            {open ? open.topicName : weakest!.name}
+          </p>
+          {open ? (
+            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+              <ProgressBar
+                value={open.answeredCount / open.totalQuestions}
+                label="Session progress"
+                className="w-40 shrink-0"
+              />
+              <span className="whitespace-nowrap text-sm text-gray-500">
+                {open.answeredCount} of {open.totalQuestions} answered
+              </span>
+            </div>
+          ) : (
+            <p className="mt-1 text-gray-500">
+              {mastery.has(weakest!.id)
+                ? `Your lowest topic at ${pct(mastery.get(weakest!.id)!.score)} mastery.`
                 : 'You haven’t tried this one yet.'}{' '}
               10 questions, about 10 minutes.
             </p>
-          </div>
-        ) : (
-          <p className="text-ink-2">No topics yet.</p>
-        )}
+          )}
+        </div>
         {open ? (
-          <Button size="lg" onClick={() => navigate(`/student/practice/${open.id}`)}>
+          <Button size="lg" icon={Play} onClick={() => navigate(`/student/practice/${open.id}`)}>
             Resume
           </Button>
-        ) : weakest ? (
+        ) : (
           <Button
             size="lg"
+            icon={Play}
             loading={start.isPending}
-            onClick={() => start.mutate({ topicId: weakest.id })}
+            onClick={() => start.mutate({ topicId: weakest!.id })}
           >
             Start practice
           </Button>
-        ) : null}
+        )}
       </div>
-    </section>
+    </Card>
   );
 }
 
@@ -214,72 +238,80 @@ function Assignments() {
   const done = q.data?.filter((a) => a.completed) ?? [];
 
   return (
-    <section aria-labelledby="assigned-heading">
-      <SectionTitle id="assigned-heading" aside={q.data && `${todo.length} to do`}>
-        Set by your teacher
-      </SectionTitle>
+    <Card>
+      <CardHeader title="Assigned work" description={q.data ? `${todo.length} to do` : undefined} />
       {q.isError ? (
-        <ErrorState error={q.error} onRetry={() => void q.refetch()} />
+        <div className="p-5">
+          <ErrorState error={q.error} onRetry={() => void q.refetch()} />
+        </div>
       ) : q.isPending ? (
-        <LoadingBlock rows={2} />
+        <div className="p-5">
+          <LoadingBlock rows={2} />
+        </div>
       ) : q.data.length === 0 ? (
         <EmptyState
-          title="Nothing set right now"
-          description="Work your teacher assigns will appear here with its due date."
+          icon={Inbox}
+          title="Nothing assigned"
+          description="When your teacher assigns a quiz it will show up here with its due date."
         />
       ) : (
-        <Panel>
-          <ul className="divide-y divide-rule">
-            {[...todo, ...done].map((a) => (
-              <li
-                key={a.id}
-                className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
-              >
+        <ul className="divide-y divide-gray-100">
+          {[...todo, ...done].map((a) => (
+            <li
+              key={a.id}
+              className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <div className="flex min-w-0 items-start gap-3">
+                <span
+                  className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${a.completed ? 'bg-success-50 text-success-600' : 'bg-gray-100 text-gray-500'}`}
+                >
+                  {a.completed ? (
+                    <CircleCheck className="h-4 w-4" aria-hidden="true" />
+                  ) : (
+                    <CalendarClock className="h-4 w-4" aria-hidden="true" />
+                  )}
+                </span>
                 <div className="min-w-0">
-                  <p
-                    className={
-                      a.completed ? 'text-ink-3 line-through decoration-ink-4' : 'font-medium'
-                    }
-                  >
-                    {a.quizTitle}
-                  </p>
-                  <p className="text-sm text-ink-3">
+                  <p className="truncate font-medium text-gray-900">{a.quizTitle}</p>
+                  <p className="truncate text-gray-500">
                     {a.className} · {a.topicName} · {a.questionCount} questions
                   </p>
                 </div>
-                <div className="flex shrink-0 items-center gap-4">
-                  {a.completed ? (
-                    <Status tone="right">Handed in</Status>
-                  ) : (
-                    <>
-                      <Status tone={a.overdue ? 'wrong' : 'pencil'}>{dueLabel(a.dueAt)}</Status>
-                      <Button
-                        size="sm"
-                        variant={a.overdue ? 'primary' : 'secondary'}
-                        loading={start.isPending && start.variables?.assignmentId === a.id}
-                        onClick={() => start.mutate({ assignmentId: a.id })}
-                      >
-                        Start
-                      </Button>
-                    </>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ul>
-        </Panel>
+              </div>
+              <div className="flex shrink-0 items-center gap-3 pl-11 sm:pl-0">
+                {a.completed ? (
+                  <Badge tone="success">Completed</Badge>
+                ) : (
+                  <>
+                    <Badge tone={a.overdue ? 'danger' : 'warning'}>{dueLabel(a.dueAt)}</Badge>
+                    <Button
+                      size="sm"
+                      variant={a.overdue ? 'primary' : 'secondary'}
+                      loading={start.isPending && start.variables?.assignmentId === a.id}
+                      onClick={() => start.mutate({ assignmentId: a.id })}
+                    >
+                      Start
+                    </Button>
+                  </>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
       )}
-    </section>
+    </Card>
   );
 }
 
 function JoinClass() {
   const qc = useQueryClient();
+  const toast = useToast();
   const [code, setCode] = useState('');
   const join = useMutation({
     mutationFn: (joinCode: string) => api.post<ClassDto>('/classes/join', { joinCode }),
-    onSuccess: () => {
+    onSuccess: (cls) => {
       setCode('');
+      toast.success(`You joined ${cls.name}`);
       void qc.invalidateQueries({ queryKey: ['classes'] });
       void qc.invalidateQueries({ queryKey: ['assignments'] });
     },
@@ -289,59 +321,64 @@ function JoinClass() {
     if (code.trim()) join.mutate(code.trim().toUpperCase());
   };
   return (
-    <Panel as="section">
-      <PanelHeader title="Join a class" />
+    <Card>
+      <CardHeader title="Join a class" />
       <form className="space-y-3 p-5" onSubmit={onSubmit}>
         <Input
           label="Class code"
           value={code}
           onChange={(e) => setCode(e.target.value.toUpperCase())}
-          placeholder="GRADE7AA"
+          placeholder="e.g. GRADE7AA"
           autoCapitalize="characters"
           spellCheck={false}
           maxLength={10}
-          className="[&_input]:font-mono [&_input]:tracking-widest"
-          hint="Your teacher has it."
+          className="[&_input]:font-mono [&_input]:tracking-wider"
+          hint="Ask your teacher for the code."
         />
-        {join.isError && <Alert tone="wrong">{errorMessage(join.error)}</Alert>}
-        {join.isSuccess && <Alert tone="right">Joined {join.data.name}.</Alert>}
+        {join.isError && <Alert tone="danger">{errorMessage(join.error)}</Alert>}
         <Button
           type="submit"
           variant="secondary"
+          icon={UserPlus}
           className="w-full"
           loading={join.isPending}
           disabled={!code.trim()}
         >
-          Join
+          Join class
         </Button>
       </form>
-    </Panel>
+    </Card>
   );
 }
 
 function MyClasses() {
   const q = useQuery({ queryKey: ['classes'], queryFn: () => api.get<ClassDto[]>('/classes') });
   return (
-    <Panel as="section">
-      <PanelHeader title="Your classes" />
-      <div className="px-5 py-4">
-        {q.isError ? (
+    <Card>
+      <CardHeader title="Your classes" />
+      {q.isError ? (
+        <div className="p-5">
           <ErrorState error={q.error} onRetry={() => void q.refetch()} />
-        ) : q.isPending ? (
+        </div>
+      ) : q.isPending ? (
+        <div className="p-5">
           <LoadingBlock rows={1} />
-        ) : q.data.length === 0 ? (
-          <p className="text-sm text-ink-3">Not in a class yet.</p>
-        ) : (
-          <ul className="space-y-3">
-            {q.data.map((c) => (
-              <li key={c.id}>
-                <p className="text-sm font-medium">{c.name}</p>
-                <p className="text-sm text-ink-3">{c.teacherName}</p>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-    </Panel>
+        </div>
+      ) : q.data.length === 0 ? (
+        <p className="px-5 py-6 text-gray-500">You haven’t joined a class yet.</p>
+      ) : (
+        <ul className="divide-y divide-gray-100">
+          {q.data.map((c) => (
+            <li key={c.id} className="flex items-center gap-3 px-5 py-3">
+              <Avatar name={c.teacherName} />
+              <div className="min-w-0">
+                <p className="truncate font-medium text-gray-900">{c.name}</p>
+                <p className="truncate text-gray-500">{c.teacherName}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Card>
   );
 }

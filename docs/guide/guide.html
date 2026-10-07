@@ -1,0 +1,1903 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>LearnLoop: How It Works, Start to End</title>
+    <style>
+      @font-face {
+        font-family: 'Plex';
+        font-weight: 400;
+        src: url('../../node_modules/@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-400-normal.woff2');
+      }
+      @font-face {
+        font-family: 'Plex';
+        font-weight: 500;
+        src: url('../../node_modules/@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-500-normal.woff2');
+      }
+      @font-face {
+        font-family: 'Plex';
+        font-weight: 600;
+        src: url('../../node_modules/@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-600-normal.woff2');
+      }
+      @font-face {
+        font-family: 'PlexMono';
+        font-weight: 400;
+        src: url('../../node_modules/@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-400-normal.woff2');
+      }
+      @font-face {
+        font-family: 'PlexMono';
+        font-weight: 500;
+        src: url('../../node_modules/@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-500-normal.woff2');
+      }
+      @font-face {
+        font-family: 'Serif';
+        font-weight: 200 900;
+        src: url('../../node_modules/@fontsource-variable/source-serif-4/files/source-serif-4-latin-wght-normal.woff2');
+      }
+
+      :root {
+        --paper: #f6f4ee;
+        --raised: #fffefb;
+        --sunken: #efebe2;
+        --ink: #1c1b17;
+        --ink2: #57534a;
+        --ink3: #6b665d;
+        --rule: #e3ded2;
+        --rule2: #cdc6b6;
+        --pencil: #f2c230;
+        --pencil-soft: #fbefc4;
+        --pencil-deep: #7a5800;
+        --ok: #276b43;
+        --ok-soft: #e6f1e9;
+        --bad: #b23a26;
+        --bad-soft: #f8e5e0;
+      }
+      @page {
+        size: A4;
+        margin: 15mm 16mm 17mm;
+        @bottom-center {
+          content: 'LearnLoop · How it works · ' counter(page);
+          font: 400 8pt 'PlexMono';
+          color: #6b665d;
+        }
+      }
+      @page :first {
+        margin: 0;
+        @bottom-center {
+          content: none;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      body {
+        margin: 0;
+        font:
+          400 9.6pt/1.5 'Plex',
+          sans-serif;
+        color: var(--ink);
+        background: #fff;
+      }
+
+      h1,
+      h2,
+      h3 {
+        font-family: 'Serif', Georgia, serif;
+        font-weight: 600;
+        margin: 0;
+        color: var(--ink);
+      }
+      h2 {
+        break-after: avoid;
+        font-size: 19pt;
+        line-height: 1.15;
+        letter-spacing: -0.01em;
+        margin: 0 0 4mm;
+        padding-top: 2mm;
+        border-top: 3px solid var(--pencil);
+      }
+      h3 {
+        font-size: 12.5pt;
+        margin: 5mm 0 2mm;
+        break-after: avoid;
+      }
+      p {
+        margin: 0 0 3mm;
+      }
+      .eyebrow {
+        font: 500 7.5pt 'PlexMono';
+        text-transform: uppercase;
+        color: var(--ink3);
+        margin: 0 0 1.5mm;
+        letter-spacing: 0.02em;
+      }
+      .lead {
+        font-size: 11.5pt;
+        color: var(--ink2);
+        max-width: 150mm;
+      }
+      code,
+      .mono {
+        font-family: 'PlexMono', monospace;
+        font-size: 8.6pt;
+        background: var(--sunken);
+        border: 1px solid var(--rule);
+        border-radius: 3px;
+        padding: 0.2mm 1.2mm;
+      }
+      ul,
+      ol {
+        margin: 0 0 3mm;
+        padding-left: 5.5mm;
+      }
+      li {
+        margin-bottom: 1.2mm;
+      }
+      section.page {
+        break-before: page;
+      }
+      .keep {
+        break-inside: avoid;
+      }
+
+      /* Cover */
+      .cover {
+        height: 297mm;
+        width: 210mm;
+        background: var(--paper);
+        padding: 26mm 22mm;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        break-after: page;
+      }
+      .cover h1 {
+        font-size: 44pt;
+        line-height: 1.05;
+        letter-spacing: -0.02em;
+        margin: 8mm 0 6mm;
+        max-width: 150mm;
+      }
+      .cover .sub {
+        font-size: 14pt;
+        color: var(--ink2);
+        max-width: 140mm;
+      }
+      .cover .logo {
+        display: flex;
+        align-items: center;
+        gap: 3mm;
+        font: 600 17pt 'Serif';
+      }
+      .cover .meta {
+        display: flex;
+        gap: 12mm;
+        font: 400 8.5pt 'PlexMono';
+        color: var(--ink3);
+        border-top: 1px solid var(--rule2);
+        padding-top: 4mm;
+      }
+      .cover .meta b {
+        display: block;
+        color: var(--ink);
+        font-weight: 500;
+      }
+      .cover .shot {
+        border: 1px solid var(--rule2);
+        border-radius: 6px;
+        overflow: hidden;
+        box-shadow: 0 10px 30px -14px rgba(28, 27, 23, 0.35);
+      }
+      .cover .shot img {
+        display: block;
+        width: 100%;
+      }
+
+      /* Contents */
+      .toc {
+        columns: 2;
+        column-gap: 12mm;
+        margin-top: 6mm;
+      }
+      .toc a {
+        color: inherit;
+        text-decoration: none;
+      }
+      .toc li {
+        list-style: none;
+        border-bottom: 1px dotted var(--rule2);
+        padding: 1.6mm 0;
+        break-inside: avoid;
+        display: flex;
+        gap: 3mm;
+      }
+      .toc ol {
+        padding: 0;
+      }
+      .toc .n {
+        font-family: 'PlexMono';
+        color: var(--ink3);
+        width: 7mm;
+        flex: none;
+      }
+
+      /* Callouts, tables, figures */
+      .note {
+        border-left: 3px solid var(--pencil);
+        background: var(--pencil-soft);
+        padding: 2.5mm 4mm;
+        margin: 4mm 0;
+        border-radius: 0 3px 3px 0;
+        break-inside: avoid;
+      }
+      .note.ok {
+        border-color: var(--ok);
+        background: var(--ok-soft);
+      }
+      .note.bad {
+        border-color: var(--bad);
+        background: var(--bad-soft);
+      }
+      .note p:last-child {
+        margin: 0;
+      }
+      .why {
+        color: var(--ink2);
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 2mm 0 4mm;
+        font-size: 8.8pt;
+      }
+      th {
+        text-align: left;
+        font: 500 7.5pt 'PlexMono';
+        text-transform: uppercase;
+        color: var(--ink3);
+        border-bottom: 1.5px solid var(--ink);
+        padding: 1.5mm 2mm;
+      }
+      td {
+        border-bottom: 1px solid var(--rule);
+        padding: 1.8mm 2mm;
+        vertical-align: top;
+      }
+      tr {
+        break-inside: avoid;
+      }
+      figure {
+        margin: 4mm 0 6mm;
+        break-inside: avoid;
+      }
+      figure img {
+        display: block;
+        width: 100%;
+        border: 1px solid var(--rule2);
+        border-radius: 5px;
+      }
+      figure.narrow img {
+        width: 78%;
+        margin: 0 auto;
+      }
+      figure.tall img {
+        width: 56%;
+        margin: 0 auto;
+      }
+      .pair {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6mm;
+        align-items: start;
+        margin: 3mm 0 4mm;
+      }
+      .pair figure {
+        margin: 0;
+      }
+      .side {
+        display: grid;
+        grid-template-columns: 54% 1fr;
+        gap: 7mm;
+        align-items: start;
+        margin: 3mm 0 4mm;
+      }
+      .side figure {
+        margin: 0;
+      }
+      .side h3:first-child {
+        margin-top: 0;
+      }
+      figcaption {
+        font: 400 8pt 'PlexMono';
+        color: var(--ink3);
+        margin-top: 2mm;
+        text-align: center;
+      }
+      .diagram {
+        background: var(--raised);
+        border: 1px solid var(--rule);
+        border-radius: 5px;
+        padding: 3mm;
+      }
+      .diagram svg {
+        width: 100%;
+        height: auto;
+        display: block;
+        font-family: 'Plex', sans-serif;
+      }
+      .steps {
+        counter-reset: s;
+        list-style: none;
+        padding: 0;
+      }
+      .steps li {
+        counter-increment: s;
+        position: relative;
+        padding-left: 9mm;
+        margin-bottom: 2.4mm;
+        break-inside: avoid;
+      }
+      .steps li::before {
+        content: counter(s);
+        position: absolute;
+        left: 0;
+        top: 0.3mm;
+        width: 6mm;
+        height: 6mm;
+        border-radius: 50%;
+        background: var(--ink);
+        color: #fff;
+        font: 500 8pt/6mm 'PlexMono';
+        text-align: center;
+      }
+      .cols {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6mm;
+      }
+      .cols > div {
+        break-inside: avoid;
+      }
+      .tag {
+        display: inline-block;
+        font: 500 7.5pt 'PlexMono';
+        padding: 0 1.6mm;
+        border: 1px solid var(--rule2);
+        border-radius: 2px;
+        color: var(--ink2);
+      }
+    </style>
+  </head>
+  <body>
+    <!-- ============ COVER ============ -->
+    <div class="cover">
+      <div>
+        <div class="logo">
+          <svg width="30" height="30" viewBox="0 0 32 32">
+            <rect width="32" height="32" rx="6" fill="#1C1B17" />
+            <path
+              d="M9 20.5c0-4.7 3.1-8.5 7-8.5s7 3.8 7 8.5"
+              fill="none"
+              stroke="#F6F4EE"
+              stroke-width="2.6"
+              stroke-linecap="round"
+            />
+            <circle cx="16" cy="21" r="3" fill="#F2C230" />
+          </svg>
+          LearnLoop
+        </div>
+        <h1>How it works, from the browser to the database</h1>
+        <p class="sub">
+          A walk through the whole system: what a student, a teacher and an admin see, and what
+          happens behind each click.
+        </p>
+      </div>
+      <div class="shot">
+        <img src="build/screens/04-practice-marked.jpg" alt="Practice screen" />
+      </div>
+      <div class="meta">
+        <div><b>Pass 1 of 4</b>SRS weeks 1 and 2</div>
+        <div><b>October 2026</b>Version 1.0</div>
+        <div><b>154 tests</b>passing</div>
+        <div><b>localhost:8080</b>Docker stack</div>
+      </div>
+    </div>
+
+    <!-- ============ CONTENTS + OVERVIEW ============ -->
+    <section>
+      <p class="eyebrow">Contents</p>
+      <h2>What's inside</h2>
+      <div class="toc">
+        <ol>
+          <li><span class="n">01</span><span>What LearnLoop is</span></li>
+          <li><span class="n">02</span><span>The big picture (architecture)</span></li>
+          <li><span class="n">03</span><span>One request, start to end</span></li>
+          <li><span class="n">04</span><span>Logging in and staying logged in</span></li>
+          <li><span class="n">05</span><span>The student journey</span></li>
+          <li><span class="n">06</span><span>How adaptive practice works</span></li>
+          <li><span class="n">07</span><span>The teacher journey</span></li>
+          <li><span class="n">08</span><span>The admin journey and the audit log</span></li>
+          <li><span class="n">09</span><span>The database</span></li>
+          <li><span class="n">10</span><span>Security, layer by layer</span></li>
+          <li><span class="n">11</span><span>Testing and CI/CD</span></li>
+          <li><span class="n">12</span><span>Running it and the design system</span></li>
+          <li><span class="n">13</span><span>Scaling, and what comes next</span></li>
+        </ol>
+      </div>
+
+      <h2 style="margin-top: 6mm">01 · What LearnLoop is</h2>
+      <p class="lead">
+        An adaptive maths practice platform for grades 6 to 8. Students practise; the questions get
+        harder when they do well and easier when they struggle. Teachers see where the class is
+        stuck. An admin manages accounts and can audit everything.
+      </p>
+      <div class="cols">
+        <div>
+          <h3>The three roles</h3>
+          <table>
+            <tr>
+              <th>Role</th>
+              <th>Goal</th>
+            </tr>
+            <tr>
+              <td><b>Student</b></td>
+              <td>Practise, get instant feedback, see progress, finish set homework</td>
+            </tr>
+            <tr>
+              <td><b>Teacher</b></td>
+              <td>Run classes, build quizzes, assign work, spot students who need help</td>
+            </tr>
+            <tr>
+              <td><b>Admin</b></td>
+              <td>Manage users and roles, read the audit log</td>
+            </tr>
+          </table>
+        </div>
+        <div>
+          <h3>Where it stands</h3>
+          <table>
+            <tr>
+              <th>Phase</th>
+              <th>Status</th>
+            </tr>
+            <tr>
+              <td>Week 1: foundation</td>
+              <td>Done</td>
+            </tr>
+            <tr>
+              <td>Week 2: core product</td>
+              <td>Done</td>
+            </tr>
+            <tr>
+              <td>Week 3: AI + MCP server</td>
+              <td>Next</td>
+            </tr>
+            <tr>
+              <td>Week 4: hardening, deploy</td>
+              <td>Planned</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+      <div class="note">
+        <p>
+          <b>Reading tip.</b> Each section says <i>what you see</i>, then
+          <i>what happens behind it</i>, then <i>why it was built that way</i>. File names are given
+          so you can open the code next to this guide.
+        </p>
+      </div>
+      <div class="note">
+        <p>
+          <b>Where to read more.</b> <span class="mono">README.md</span> (overview),
+          <span class="mono">SECURITY.md</span> (controls), <span class="mono">docs/adr/</span> (why
+          decisions were made), <span class="mono">docs/design.md</span> (visual rules),
+          <span class="mono">CLAUDE.md</span> (project memory and the scale rules).
+        </p>
+      </div>
+      <div class="side" style="grid-template-columns: 1fr 48%">
+        <div>
+          <h3>Explore the API yourself</h3>
+          <p>
+            Every endpoint is listed, with its allowed roles and input rules, at
+            <span class="mono">http://localhost:8080/api/docs</span>. The page is generated from the
+            same declarations the server uses to check requests, so it can never drift out of date.
+            There are 30 endpoints.
+          </p>
+        </div>
+        <figure>
+          <img src="build/screens/13-api-docs.jpg" alt="API docs" />
+          <figcaption>Fig 1 · The API documentation page.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- ============ ARCHITECTURE ============ -->
+    <section style="margin-top: 8mm">
+      <p class="eyebrow">02 · Architecture</p>
+      <h2>The big picture</h2>
+      <p class="lead">
+        Five containers run together. The browser only ever talks to one address,
+        <span class="mono">localhost:8080</span>.
+      </p>
+
+      <div class="diagram keep">
+        <svg viewBox="0 0 760 330" role="img" aria-label="Architecture diagram">
+          <defs>
+            <marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+              <path d="M0,0 L8,4 L0,8 z" fill="#1c1b17" />
+            </marker>
+          </defs>
+          <rect x="10" y="125" width="120" height="70" rx="6" fill="#fffefb" stroke="#1c1b17" />
+          <text x="70" y="153" text-anchor="middle" font-weight="600" font-size="14">Browser</text>
+          <text x="70" y="172" text-anchor="middle" font-size="11" fill="#57534a">React app</text>
+          <rect x="175" y="105" width="130" height="110" rx="6" fill="#fffefb" stroke="#1c1b17" />
+          <text x="240" y="135" text-anchor="middle" font-weight="600" font-size="14">nginx</text>
+          <text x="240" y="154" text-anchor="middle" font-size="11" fill="#57534a">port 8080</text>
+          <text x="240" y="176" text-anchor="middle" font-size="10.5" fill="#57534a">
+            serves the app files
+          </text>
+          <text x="240" y="192" text-anchor="middle" font-size="10.5" fill="#57534a">
+            forwards /api
+          </text>
+          <rect x="350" y="95" width="150" height="130" rx="6" fill="#fbefc4" stroke="#1c1b17" />
+          <text x="425" y="125" text-anchor="middle" font-weight="600" font-size="14">API</text>
+          <text x="425" y="143" text-anchor="middle" font-size="11" fill="#57534a">
+            Express + TypeScript
+          </text>
+          <text x="425" y="168" text-anchor="middle" font-size="10.5" fill="#57534a">
+            checks who you are
+          </text>
+          <text x="425" y="184" text-anchor="middle" font-size="10.5" fill="#57534a">
+            checks the input
+          </text>
+          <text x="425" y="200" text-anchor="middle" font-size="10.5" fill="#57534a">
+            runs the business rules
+          </text>
+          <rect x="560" y="40" width="180" height="70" rx="6" fill="#fffefb" stroke="#1c1b17" />
+          <text x="650" y="68" text-anchor="middle" font-weight="600" font-size="14">
+            PostgreSQL 16
+          </text>
+          <text x="650" y="88" text-anchor="middle" font-size="11" fill="#57534a">
+            all permanent data
+          </text>
+          <rect x="560" y="130" width="180" height="70" rx="6" fill="#fffefb" stroke="#1c1b17" />
+          <text x="650" y="158" text-anchor="middle" font-weight="600" font-size="14">Redis 7</text>
+          <text x="650" y="178" text-anchor="middle" font-size="11" fill="#57534a">
+            rate-limit counters
+          </text>
+          <rect
+            x="560"
+            y="225"
+            width="180"
+            height="70"
+            rx="6"
+            fill="#efebe2"
+            stroke="#6b665d"
+            stroke-dasharray="5 4"
+          />
+          <text
+            x="650"
+            y="253"
+            text-anchor="middle"
+            font-weight="600"
+            font-size="14"
+            fill="#57534a"
+          >
+            LLM provider
+          </text>
+          <text x="650" y="273" text-anchor="middle" font-size="11" fill="#57534a">
+            Week 3: Gemini / Ollama
+          </text>
+          <rect
+            x="350"
+            y="255"
+            width="150"
+            height="55"
+            rx="6"
+            fill="#efebe2"
+            stroke="#6b665d"
+            stroke-dasharray="5 4"
+          />
+          <text
+            x="425"
+            y="280"
+            text-anchor="middle"
+            font-weight="600"
+            font-size="13"
+            fill="#57534a"
+          >
+            MCP server
+          </text>
+          <text x="425" y="297" text-anchor="middle" font-size="10.5" fill="#57534a">
+            Week 3 (placeholder)
+          </text>
+          <line
+            x1="130"
+            y1="160"
+            x2="173"
+            y2="160"
+            stroke="#1c1b17"
+            stroke-width="1.5"
+            marker-end="url(#a)"
+          />
+          <line
+            x1="305"
+            y1="160"
+            x2="348"
+            y2="160"
+            stroke="#1c1b17"
+            stroke-width="1.5"
+            marker-end="url(#a)"
+          />
+          <line
+            x1="500"
+            y1="130"
+            x2="558"
+            y2="85"
+            stroke="#1c1b17"
+            stroke-width="1.5"
+            marker-end="url(#a)"
+          />
+          <line
+            x1="500"
+            y1="165"
+            x2="558"
+            y2="165"
+            stroke="#1c1b17"
+            stroke-width="1.5"
+            marker-end="url(#a)"
+          />
+          <line
+            x1="500"
+            y1="205"
+            x2="558"
+            y2="245"
+            stroke="#6b665d"
+            stroke-width="1.5"
+            stroke-dasharray="5 4"
+            marker-end="url(#a)"
+          />
+          <line
+            x1="425"
+            y1="255"
+            x2="425"
+            y2="227"
+            stroke="#6b665d"
+            stroke-width="1.5"
+            stroke-dasharray="5 4"
+            marker-end="url(#a)"
+          />
+        </svg>
+      </div>
+
+      <h3>What each part does</h3>
+      <table>
+        <tr>
+          <th>Part</th>
+          <th>Job</th>
+          <th>Where</th>
+        </tr>
+        <tr>
+          <td><b>Web app</b></td>
+          <td>
+            The screens. Built with React, TypeScript and Vite, styled with Tailwind. It never
+            touches the database; it only calls the API.
+          </td>
+          <td><span class="mono">apps/web</span></td>
+        </tr>
+        <tr>
+          <td><b>nginx</b></td>
+          <td>
+            Serves the built web files and forwards anything starting with
+            <span class="mono">/api</span> to the API. This makes the app and API share one origin,
+            which lets the strict cookies work.
+          </td>
+          <td><span class="mono">infra/nginx.conf</span></td>
+        </tr>
+        <tr>
+          <td><b>API</b></td>
+          <td>
+            The only thing that can read or write data. Every rule (who may do what, what input is
+            valid, how difficulty adapts) lives here.
+          </td>
+          <td><span class="mono">apps/api</span></td>
+        </tr>
+        <tr>
+          <td><b>PostgreSQL</b></td>
+          <td>
+            Stores users, classes, questions, answers, scores and the audit log. Accessed through
+            Prisma.
+          </td>
+          <td><span class="mono">apps/api/prisma</span></td>
+        </tr>
+        <tr>
+          <td><b>Redis</b></td>
+          <td>
+            Counts login attempts per IP and per account so brute-force guessing is blocked, even
+            with several API servers.
+          </td>
+          <td><span class="mono">middleware/rateLimit.ts</span></td>
+        </tr>
+        <tr>
+          <td><b>Shared package</b></td>
+          <td>
+            The input rules (Zod schemas) and response shapes, used by <i>both</i> the web app and
+            the API so they can never disagree.
+          </td>
+          <td><span class="mono">packages/shared</span></td>
+        </tr>
+      </table>
+
+      <div class="note">
+        <p>
+          <b>Why one API for everything?</b> The web app and (in Week 3) the AI-facing MCP server
+          both call the same API. So one set of permission checks, validation and audit logging
+          protects every way into the data. There is no back door.
+        </p>
+      </div>
+
+      <p class="why">
+        <b>The repository:</b> <span class="mono">apps/web</span> (front end) ·
+        <span class="mono">apps/api</span> (API, schema, seed, tests) ·
+        <span class="mono">packages/shared</span> (schemas and types) ·
+        <span class="mono">infra</span> (Docker, nginx) ·
+        <span class="mono">apps/mcp-server</span> (Week 3 placeholder) ·
+        <span class="mono">docs</span> (decisions, design, this guide).
+      </p>
+    </section>
+
+    <!-- ============ ONE REQUEST ============ -->
+    <section style="margin-top: 8mm">
+      <p class="eyebrow">03 · One request, start to end</p>
+      <h2>What happens when you click something</h2>
+      <p class="lead">
+        Every action, from "Check answer" to "Approve question", travels the same path. Learn this
+        path once and the rest of the system makes sense.
+      </p>
+
+      <div class="diagram keep">
+        <svg viewBox="0 0 760 200" role="img" aria-label="Request pipeline">
+          <defs>
+            <marker id="b" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+              <path d="M0,0 L7,3.5 L0,7 z" fill="#1c1b17" />
+            </marker>
+          </defs>
+          <g font-size="10.5" text-anchor="middle">
+            <rect x="4" y="60" width="78" height="62" rx="5" fill="#fffefb" stroke="#1c1b17" />
+            <text x="43" y="86" font-weight="600">Request</text>
+            <text x="43" y="102" fill="#57534a">+ request ID</text>
+            <rect x="96" y="60" width="78" height="62" rx="5" fill="#fffefb" stroke="#1c1b17" />
+            <text x="135" y="86" font-weight="600">Headers</text>
+            <text x="135" y="102" fill="#57534a">+ CORS</text>
+            <rect x="188" y="60" width="78" height="62" rx="5" fill="#fffefb" stroke="#1c1b17" />
+            <text x="227" y="86" font-weight="600">CSRF</text>
+            <text x="227" y="102" fill="#57534a">check</text>
+            <rect x="280" y="60" width="78" height="62" rx="5" fill="#fffefb" stroke="#1c1b17" />
+            <text x="319" y="86" font-weight="600">Rate limit</text>
+            <text x="319" y="102" fill="#57534a">(auth only)</text>
+            <rect x="372" y="60" width="78" height="62" rx="5" fill="#fbefc4" stroke="#1c1b17" />
+            <text x="411" y="86" font-weight="600">Who are</text>
+            <text x="411" y="102" font-weight="600">you?</text>
+            <rect x="464" y="60" width="78" height="62" rx="5" fill="#fbefc4" stroke="#1c1b17" />
+            <text x="503" y="86" font-weight="600">Allowed</text>
+            <text x="503" y="102" font-weight="600">role?</text>
+            <rect x="556" y="60" width="78" height="62" rx="5" fill="#fbefc4" stroke="#1c1b17" />
+            <text x="595" y="86" font-weight="600">Valid</text>
+            <text x="595" y="102" font-weight="600">input?</text>
+            <rect x="648" y="60" width="104" height="62" rx="5" fill="#e6f1e9" stroke="#1c1b17" />
+            <text x="700" y="86" font-weight="600">Handler</text>
+            <text x="700" y="102" fill="#57534a">service → Prisma</text>
+            <g stroke="#1c1b17" stroke-width="1.4" marker-end="url(#b)">
+              <line x1="82" y1="91" x2="94" y2="91" />
+              <line x1="174" y1="91" x2="186" y2="91" />
+              <line x1="266" y1="91" x2="278" y2="91" />
+              <line x1="358" y1="91" x2="370" y2="91" />
+              <line x1="450" y1="91" x2="462" y2="91" />
+              <line x1="542" y1="91" x2="554" y2="91" />
+              <line x1="634" y1="91" x2="646" y2="91" />
+            </g>
+            <text x="411" y="150" fill="#b23a26">fails → 401</text>
+            <text x="503" y="150" fill="#b23a26">fails → 403</text>
+            <text x="595" y="150" fill="#b23a26">fails → 400</text>
+            <text x="380" y="185" fill="#57534a">
+              Any failure becomes one tidy error shape: { code, message, requestId }. No stack
+              traces ever leave the server.
+            </text>
+          </g>
+        </svg>
+      </div>
+
+      <h3>Follow one click: "Check answer" on a practice question</h3>
+      <ol class="steps">
+        <li>
+          <b>The browser</b> sends
+          <span class="mono">POST /api/v1/practice/sessions/:id/answer</span> with the answer, the
+          question ID, and how long the student took. It adds the access token and the CSRF token as
+          headers, and nginx forwards the request to the API.
+        </li>
+        <li>
+          <b>The API's first layers</b> stamp a request ID on the log line, add security headers,
+          check the origin is allowed, and verify the CSRF token matches the cookie.
+        </li>
+        <li>
+          <b>Authentication</b> checks the token's signature and expiry, then re-reads the user from
+          the database. A disabled account or changed role takes effect on the very next click.
+        </li>
+        <li>
+          <b>The role check</b> confirms this route allows students. A teacher calling it gets a
+          403.
+        </li>
+        <li>
+          <b>Zod validation</b> confirms the body has exactly the expected fields. Unknown fields
+          are rejected.
+        </li>
+        <li>
+          <b>The handler</b> (<span class="mono">services/practice.ts</span>) checks that this
+          session belongs to <i>this</i> student, compares the answer on the server, adapts the
+          difficulty, saves the attempt, updates mastery, and returns the verdict with the
+          explanation.
+        </li>
+        <li>
+          <b>The browser</b> shows the green or red marking, the explanation, and any level change.
+        </li>
+      </ol>
+
+      <div class="note">
+        <p>
+          <b>The key design idea.</b> Each route is declared once (<span class="mono"
+            >ApiModule.route</span
+          >
+          in <span class="mono">lib/route.ts</span>) with its path, allowed roles and input shape.
+          That one declaration drives the login check, the role check, validation <i>and</i> the API
+          docs, so a route cannot exist without saying who may use it.
+        </p>
+      </div>
+    </section>
+
+    <!-- ============ AUTH ============ -->
+    <section class="page">
+      <p class="eyebrow">04 · Authentication</p>
+      <h2>Logging in and staying logged in</h2>
+      <p class="lead">
+        The login page shows what the product looks like on the right, and three demo buttons sign
+        you in as each role.
+      </p>
+
+      <div class="side" style="grid-template-columns: 40% 1fr">
+        <figure>
+          <img src="build/screens/01-login.jpg" alt="Login" />
+          <figcaption>
+            Fig 2 · The login page. The right side is a real screenshot of the product; "Or try a
+            demo account" signs in instantly.
+          </figcaption>
+        </figure>
+        <div>
+          <h3 style="margin-top: 0">Step by step</h3>
+          <ol class="steps">
+            <li>
+              <b>Rate limit.</b> Redis counts attempts per IP and per email. Too many and the API
+              answers 429 with a <span class="mono">Retry-After</span> header.
+            </li>
+            <li>
+              <b>Find the user and check the password.</b> Passwords are stored as Argon2id hashes.
+              If the email doesn't exist, the server still hashes against a dummy value, so the
+              response time doesn't reveal which emails are registered.
+            </li>
+            <li>
+              <b>Issue three things.</b> A short-lived <i>access token</i> (a signed JWT, valid 15
+              minutes), a long-lived <i>refresh token</i> (random, 7 days) and a <i>CSRF token</i>.
+            </li>
+            <li>
+              <b>Store safely.</b> The refresh token goes into an HttpOnly, SameSite=Strict cookie
+              that JavaScript cannot read. The database keeps only its SHA-256 hash. The access
+              token lives in the page's memory only, never in localStorage.
+            </li>
+            <li><b>Audit.</b> Success and failure are both written to the audit log.</li>
+          </ol>
+        </div>
+      </div>
+
+      <h3>Staying logged in</h3>
+      <table>
+        <tr>
+          <th>Situation</th>
+          <th>What happens</th>
+        </tr>
+        <tr>
+          <td>Access token expires (15 min)</td>
+          <td>
+            The web client quietly calls <span class="mono">/auth/refresh</span> using the cookie,
+            gets a new access token, and retries the failed request. The user notices nothing.
+          </td>
+        </tr>
+        <tr>
+          <td>Page reload</td>
+          <td>
+            Memory is empty, so the app calls <span class="mono">/auth/refresh</span> first. If the
+            cookie is valid, the session is restored.
+          </td>
+        </tr>
+        <tr>
+          <td>Every refresh</td>
+          <td>
+            The refresh token is <b>rotated</b>: the old one is marked used, a new one issued. All
+            tokens from one login share a "family".
+          </td>
+        </tr>
+        <tr>
+          <td>An old refresh token is replayed</td>
+          <td>
+            That means it was stolen. The <b>whole family is revoked</b>, the attempt is audited,
+            and everyone using that login is signed out.
+          </td>
+        </tr>
+        <tr>
+          <td>Logout</td>
+          <td>The family is revoked and the cookies are cleared.</td>
+        </tr>
+        <tr>
+          <td>Admin disables an account</td>
+          <td>
+            All its refresh tokens are revoked, and the per-request check rejects its access token
+            immediately.
+          </td>
+        </tr>
+      </table>
+
+      <div class="note ok">
+        <p>
+          <b>Why this design?</b> A stolen access token is only useful for 15 minutes. A stolen
+          refresh token can be used once; after that, rotation exposes the theft. Keeping the access
+          token out of storage means injected scripts can't lift it.
+        </p>
+      </div>
+      <p class="why">
+        Password reset works the same careful way: a single-use link, valid 30 minutes, stored only
+        as a hash, and the response is identical whether or not the email exists.
+      </p>
+    </section>
+
+    <!-- ============ STUDENT ============ -->
+    <section class="page">
+      <p class="eyebrow">05 · The student journey</p>
+      <h2>What a student does</h2>
+      <p class="lead">
+        From login to the first question takes two clicks. The home page always offers exactly one
+        best next action.
+      </p>
+
+      <div class="pair">
+        <figure>
+          <img src="build/screens/02-student-home.jpg" alt="Student home" />
+          <figcaption>
+            Fig 3 · Home: your stats, what to do next, assigned work, topics and classes.
+          </figcaption>
+        </figure>
+        <figure>
+          <img src="build/screens/05-student-progress.jpg" alt="Progress" />
+          <figcaption>
+            Fig 4 · Progress: four stats, mastery per topic and a 14-day accuracy chart.
+          </figcaption>
+        </figure>
+      </div>
+
+      <h3>What each part does</h3>
+      <ul>
+        <li>
+          <b>The summary cards</b> show the day streak, overall accuracy and total questions
+          answered.
+        </li>
+        <li>
+          <b>The "In progress" or "Suggested" card</b> resumes an unfinished session if there is
+          one; otherwise it suggests the student's weakest topic (or one they haven't tried).
+        </li>
+        <li>
+          <b>Assigned work</b> lists assignments with due dates. Overdue work is flagged in red, and
+          finished work is marked "Completed".
+        </li>
+        <li><b>Topics</b> shows mastery per topic. Clicking one starts a 10-question session.</li>
+        <li>
+          <b>Join a class</b> takes the teacher's code (for example
+          <span class="mono">GRADE7AA</span>). Wrong codes and archived classes look the same ("not
+          found"), and guessing is rate limited.
+        </li>
+        <li>
+          <b>Progress</b> (Fig 4) shows streak, overall accuracy, questions answered, time spent, a
+          mastery bar per topic and an accuracy line for the last 14 days. The chart also has a
+          "View daily numbers" table for screen readers.
+        </li>
+      </ul>
+    </section>
+
+    <section class="page">
+      <h2>Practising a question</h2>
+      <div class="pair">
+        <figure>
+          <img src="build/screens/03-practice-question.jpg" alt="A question" />
+          <figcaption>
+            Fig 5 · The full-screen lesson page: close button and progress bar on top, one question,
+            and a fixed bottom bar.
+          </figcaption>
+        </figure>
+        <figure>
+          <img src="build/screens/04-practice-marked.jpg" alt="Marked answer" />
+          <figcaption>
+            Fig 6 · After a wrong answer the bottom bar turns red with the correct answer, the
+            worked explanation and a Continue button.
+          </figcaption>
+        </figure>
+      </div>
+      <ul>
+        <li>
+          The lesson page has no sidebar, so nothing distracts from the question. The <b>X</b> saves
+          and leaves, and the bar on top fills as questions are answered.
+        </li>
+        <li>
+          The bottom bar holds <b>Check</b>. After checking, it turns green or red, shows the answer
+          and explanation, and offers <b>Continue</b>. If the level changes, it says so (for example
+          "Level 4 → 3").
+        </li>
+        <li>
+          Multiple-choice questions can be answered with the keys <span class="mono">A</span> to
+          <span class="mono">D</span>, and <span class="mono">Enter</span> submits.
+        </li>
+        <li>
+          The marking is announced to screen readers, and focus moves to "Continue" automatically.
+        </li>
+        <li>
+          Leaving is safe: the session is stored on the server, so closing the tab and returning
+          shows the same question.
+        </li>
+      </ul>
+    </section>
+
+    <!-- ============ ADAPTIVE ============ -->
+    <section class="page">
+      <p class="eyebrow">06 · Adaptive practice</p>
+      <h2>How the difficulty adapts</h2>
+      <p class="lead">
+        The rule is deliberately simple so that a student can understand it:
+        <b>two right in a row, step up; two wrong in a row, ease off.</b>
+      </p>
+
+      <div class="diagram keep">
+        <svg viewBox="0 0 760 190" role="img" aria-label="Difficulty levels">
+          <g font-size="11" text-anchor="middle">
+            <g fill="#fffefb" stroke="#1c1b17">
+              <rect x="30" y="70" width="120" height="50" rx="5" />
+              <rect x="170" y="70" width="120" height="50" rx="5" />
+              <rect x="310" y="70" width="120" height="50" rx="5" fill="#fbefc4" />
+              <rect x="450" y="70" width="120" height="50" rx="5" />
+              <rect x="590" y="70" width="120" height="50" rx="5" />
+            </g>
+            <text x="90" y="92" font-weight="600">Level 1</text>
+            <text x="90" y="108" fill="#57534a">Warm-up</text>
+            <text x="230" y="92" font-weight="600">Level 2</text>
+            <text x="230" y="108" fill="#57534a">Easy</text>
+            <text x="370" y="92" font-weight="600">Level 3</text>
+            <text x="370" y="108" fill="#57534a">Medium</text>
+            <text x="510" y="92" font-weight="600">Level 4</text>
+            <text x="510" y="108" fill="#57534a">Hard</text>
+            <text x="650" y="92" font-weight="600">Level 5</text>
+            <text x="650" y="108" fill="#57534a">Challenge</text>
+            <path
+              d="M380 62 C 430 20, 480 20, 500 62"
+              fill="none"
+              stroke="#276b43"
+              stroke-width="1.8"
+            />
+            <text x="440" y="28" fill="#276b43" font-weight="600">2 correct in a row</text>
+            <path
+              d="M360 128 C 320 170, 260 170, 240 128"
+              fill="none"
+              stroke="#b23a26"
+              stroke-width="1.8"
+            />
+            <text x="300" y="178" fill="#b23a26" font-weight="600">2 wrong in a row</text>
+          </g>
+        </svg>
+      </div>
+
+      <h3>The pieces</h3>
+      <table>
+        <tr>
+          <th>Piece</th>
+          <th>How it works</th>
+          <th>File</th>
+        </tr>
+        <tr>
+          <td><b>Starting level</b></td>
+          <td>
+            From the student's current mastery of the topic: none or below 40% starts at 2; below
+            70% at 3; above that at 4.
+          </td>
+          <td class="mono">services/adaptive.ts</td>
+        </tr>
+        <tr>
+          <td><b>Streak counter</b></td>
+          <td>
+            Stored on the session: +n after n right in a row, −n after n wrong. At ±2 the level
+            moves one step and the streak resets, so "two in a row" always means two
+            <i>at the current level</i>. Level stays within 1 to 5.
+          </td>
+          <td class="mono">nextDifficulty()</td>
+        </tr>
+        <tr>
+          <td><b>Picking a question</b></td>
+          <td>
+            A random approved question in the topic, near the target level, that the student hasn't
+            seen in this session. If none is left the band widens (±1, ±2, ±4).
+          </td>
+          <td class="mono">services/practice.ts</td>
+        </tr>
+        <tr>
+          <td><b>Mastery score</b></td>
+          <td>
+            A running average for the first 5 answers, then a weighted average where recent answers
+            count 20%. One bad answer can't wreck an established score.
+          </td>
+          <td class="mono">updateMastery()</td>
+        </tr>
+        <tr>
+          <td><b>Checking the answer</b></td>
+          <td>
+            On the server only. Numeric answers compare by value, so <span class="mono">3/4</span>,
+            <span class="mono">0.75</span> and <span class="mono">1,250</span> all work. The browser
+            never receives the answer before submitting.
+          </td>
+          <td class="mono">isAnswerCorrect()</td>
+        </tr>
+        <tr>
+          <td><b>Assigned quizzes</b></td>
+          <td>
+            Do <i>not</i> adapt. They are a fixed set served in the teacher's order, and finishing
+            marks the assignment as handed in.
+          </td>
+          <td class="mono">services/practice.ts</td>
+        </tr>
+      </table>
+
+      <h3>What happens when an answer is submitted</h3>
+      <ol class="steps">
+        <li>Check the session belongs to this student and that the question is the current one.</li>
+        <li>Compute correct or not, and the new level and streak.</li>
+        <li>
+          <b>One database transaction:</b> claim the question (a conditional update), save the
+          attempt, update the mastery row, and, if this was the last question of an assignment, mark
+          it handed in.
+        </li>
+        <li>Return the verdict, the explanation and the new level.</li>
+      </ol>
+      <div class="note ok">
+        <p>
+          <b>Double-click safe.</b> Step 3's conditional update only succeeds once. Two simultaneous
+          submissions of the same question produce one saved attempt and one polite "already
+          answered" response. There's a test for exactly this.
+        </p>
+      </div>
+    </section>
+
+    <!-- ============ TEACHER ============ -->
+    <section class="page">
+      <p class="eyebrow">07 · The teacher journey</p>
+      <h2>What a teacher does</h2>
+      <p class="lead">
+        A teacher's loop: create a class, give students the code, assign work, then use the
+        dashboard to see who needs help.
+      </p>
+
+      <figure>
+        <img
+          src="build/screens/06-teacher-classes.jpg"
+          alt="Classes"
+          style="width: 86%; margin: 0 auto"
+        />
+        <figcaption>
+          Fig 7 · Classes. Each has a random 8-character code from letters and digits that are hard
+          to confuse (no 0, O, 1 or I). The table can be searched and sorted, and codes copy with
+          one click.
+        </figcaption>
+      </figure>
+
+      <h3>The workflow</h3>
+      <ol class="steps">
+        <li>
+          <b>Create a class.</b> A join code is generated. It can be rotated at any time (the old
+          code stops working), and classes can be archived.
+        </li>
+        <li>
+          <b>Build the question bank.</b> Questions have a topic, a level from 1 to 5, a type
+          (numeric or multiple choice), an answer key and a worked explanation. Each is
+          <span class="tag">draft</span>, <span class="tag">approved</span> or
+          <span class="tag">retired</span>; only approved ones reach students. In Week 3, AI-written
+          questions will always arrive as drafts.
+        </li>
+        <li><b>Make a quiz</b> from approved questions, in the order clicked.</li>
+        <li>
+          <b>Assign it</b> to the whole class or chosen students, with a future due date.
+          Whole-class assignments also reach students who join later.
+        </li>
+        <li>
+          <b>Watch the dashboard</b>, which has an Overview, a sortable Students list and an
+          Assignments tab. Open any student for details.
+        </li>
+      </ol>
+
+      <figure>
+        <img
+          src="build/screens/09-question-bank.jpg"
+          alt="Question bank"
+          style="width: 70%; margin: 0 auto"
+        />
+        <figcaption>
+          Fig 8 · The question bank: search, filter by topic, level and status, and approve or
+          retire questions.
+        </figcaption>
+      </figure>
+    </section>
+
+    <section class="page">
+      <h2>Assigning, and the dashboard</h2>
+      <div class="side">
+        <figure>
+          <img src="build/screens/10-assign-quiz.jpg" alt="Assign quiz" />
+          <figcaption>Fig 9 · Assigning a quiz.</figcaption>
+        </figure>
+        <div>
+          <h3>Assigning</h3>
+          <p>
+            Pick the class, a due date and who gets it. Choosing "selected students" only allows
+            students actually in that class. Past due dates and archived classes are refused.
+          </p>
+          <p>
+            Each chosen student gets an assignment slot. When they finish the quiz the slot is
+            marked handed in, and that drives the completion figures below.
+          </p>
+        </div>
+      </div>
+
+      <div class="side" style="grid-template-columns: 58% 1fr">
+        <figure>
+          <img src="build/screens/07-class-dashboard.jpg" alt="Class dashboard" />
+          <figcaption>Fig 10 · The class dashboard (Overview tab).</figcaption>
+        </figure>
+        <div>
+          <h3>Reading the dashboard</h3>
+          <table>
+            <tr>
+              <td><b>Average score</b></td>
+              <td>Average accuracy of students who have answered at least once.</td>
+            </tr>
+            <tr>
+              <td><b>Work completed</b></td>
+              <td>Finished assignment slots divided by all slots.</td>
+            </tr>
+            <tr>
+              <td><b>Need attention</b></td>
+              <td>
+                At least 5 answers with accuracy under 50%, or any overdue assignment. Reasons are
+                shown by the name.
+              </td>
+            </tr>
+            <tr>
+              <td><b>Weakest topics</b></td>
+              <td>The three topics with the lowest average mastery.</td>
+            </tr>
+            <tr>
+              <td><b>Export CSV</b></td>
+              <td>
+                Downloads the student table. Cells starting with <span class="mono">=</span>
+                <span class="mono">+</span> <span class="mono">-</span>
+                <span class="mono">@</span> are escaped so a bad name can't run as a spreadsheet
+                formula.
+              </td>
+            </tr>
+          </table>
+          <div class="note">
+            <p>
+              <b>Ownership.</b> A teacher can only open their own classes and the students in them.
+              Changing an ID in the URL to another teacher's class returns 403, and a test proves
+              it.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="page">
+      <h2>One student, in detail</h2>
+      <div class="side" style="grid-template-columns: 58% 1fr">
+        <figure>
+          <img src="build/screens/08-student-detail.jpg" alt="Student detail" />
+          <figcaption>Fig 11 · Student detail.</figcaption>
+        </figure>
+        <div>
+          <p>
+            Clicking a name from the dashboard opens the same progress view the student sees:
+            streak, accuracy, mastery per topic and the 14-day trend.
+          </p>
+          <p>
+            Below it is <b>every answer</b> the student has given, newest first: when, the question,
+            what they typed, whether it was right or wrong, the level, and the time taken. For wrong
+            answers the key is shown too, so a teacher can see <i>what</i> mistake was made, not
+            just that one was.
+          </p>
+          <p>This is the page to open before a parent meeting or a revision lesson.</p>
+          <div class="note">
+            <p>
+              <b>Access.</b> A teacher can open a student only if that student is enrolled in one of
+              their classes. Any other student returns 403.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ ADMIN ============ -->
+    <section class="page">
+      <p class="eyebrow">08 · The admin journey</p>
+      <h2>Users and the audit log</h2>
+      <figure>
+        <img
+          src="build/screens/11-admin-users.jpg"
+          alt="Users"
+          style="width: 56%; margin: 0 auto"
+        />
+        <figcaption>
+          Fig 12 · Users: search, change a role, disable or enable an account. Admins cannot change
+          themselves, so nobody can lock the system out.
+        </figcaption>
+      </figure>
+      <figure>
+        <img
+          src="build/screens/12-admin-audit.jpg"
+          alt="Audit log"
+          style="width: 56%; margin: 0 auto"
+        />
+        <figcaption>Fig 13 · The audit log, after pressing "Verify integrity".</figcaption>
+      </figure>
+
+      <h3>How the audit log can't be quietly changed</h3>
+      <div class="diagram keep">
+        <svg viewBox="0 0 760 120" role="img" aria-label="Hash chain">
+          <g font-size="10.5" text-anchor="middle">
+            <rect x="10" y="25" width="200" height="70" rx="5" fill="#fffefb" stroke="#1c1b17" />
+            <text x="110" y="46" font-weight="600">Entry 1 · auth.login</text>
+            <text x="110" y="64" fill="#57534a" class="mono">prev: 0000…0</text>
+            <text x="110" y="80" fill="#276b43" font-weight="600">hash: a41f…</text>
+            <rect x="280" y="25" width="200" height="70" rx="5" fill="#fffefb" stroke="#1c1b17" />
+            <text x="380" y="46" font-weight="600">Entry 2 · class.created</text>
+            <text x="380" y="64" fill="#276b43" font-weight="600">prev: a41f…</text>
+            <text x="380" y="80" fill="#276b43" font-weight="600">hash: 7c09…</text>
+            <rect x="550" y="25" width="200" height="70" rx="5" fill="#fffefb" stroke="#1c1b17" />
+            <text x="650" y="46" font-weight="600">Entry 3 · user.role_changed</text>
+            <text x="650" y="64" fill="#276b43" font-weight="600">prev: 7c09…</text>
+            <text x="650" y="80" fill="#276b43" font-weight="600">hash: e2b8…</text>
+            <line x1="210" y1="60" x2="278" y2="60" stroke="#1c1b17" stroke-width="1.5" />
+            <line x1="480" y1="60" x2="548" y2="60" stroke="#1c1b17" stroke-width="1.5" />
+          </g>
+        </svg>
+      </div>
+      <ul>
+        <li>
+          Each entry stores a hash of its own content <i>and</i> the previous entry's hash. Change
+          any row and every hash after it stops matching.
+        </li>
+        <li>"Verify integrity" re-computes all hashes and reports the first broken entry.</li>
+        <li>
+          A second defence: a Postgres <b>trigger</b> rejects any UPDATE or DELETE on the table,
+          even from a database tool. Tests cover both the trigger and the detection if the trigger
+          is bypassed.
+        </li>
+        <li>
+          Recorded: logins and failures, token-reuse alarms, role changes, disabling, class,
+          question, quiz and assignment actions. Raw passwords and tokens are never logged.
+        </li>
+      </ul>
+    </section>
+
+    <!-- ============ DATABASE ============ -->
+    <section class="page">
+      <p class="eyebrow">09 · The database</p>
+      <h2>Where the data lives</h2>
+      <p class="lead">
+        PostgreSQL 16, accessed through Prisma. 16 tables. You can open it in DBeaver at
+        <span class="mono">localhost:5432</span> (user, password and database are all
+        <span class="mono">learnloop</span> in development).
+      </p>
+
+      <div class="diagram keep">
+        <svg viewBox="0 0 760 360" role="img" aria-label="Data model">
+          <g font-size="11" text-anchor="middle">
+            <g fill="#fffefb" stroke="#1c1b17">
+              <rect x="300" y="10" width="160" height="46" rx="5" fill="#fbefc4" />
+              <rect x="20" y="100" width="130" height="46" rx="5" />
+              <rect x="190" y="100" width="130" height="46" rx="5" />
+              <rect x="20" y="200" width="130" height="46" rx="5" />
+              <rect x="190" y="200" width="130" height="46" rx="5" />
+              <rect x="360" y="100" width="130" height="46" rx="5" />
+              <rect x="360" y="200" width="130" height="46" rx="5" />
+              <rect x="530" y="100" width="130" height="46" rx="5" />
+              <rect x="530" y="200" width="130" height="46" rx="5" />
+              <rect x="190" y="300" width="130" height="46" rx="5" />
+              <rect x="360" y="300" width="130" height="46" rx="5" />
+              <rect x="530" y="300" width="130" height="46" rx="5" />
+              <rect x="20" y="300" width="130" height="46" rx="5" fill="#efebe2" />
+            </g>
+            <text x="380" y="30" font-weight="600" font-size="13">users</text>
+            <text x="380" y="46" fill="#57534a">role: student | teacher | admin</text>
+            <text x="85" y="120" font-weight="600">classes</text>
+            <text x="85" y="136" fill="#57534a">join_code, archived</text>
+            <text x="255" y="120" font-weight="600">enrollments</text>
+            <text x="255" y="136" fill="#57534a">class + student</text>
+            <text x="85" y="220" font-weight="600">assignments</text>
+            <text x="85" y="236" fill="#57534a">due_at, whole_class</text>
+            <text x="255" y="220" font-weight="600">assignment_targets</text>
+            <text x="255" y="236" fill="#57534a">completed_at</text>
+            <text x="425" y="120" font-weight="600">practice_sessions</text>
+            <text x="425" y="136" fill="#57534a">level, streak, current Q</text>
+            <text x="425" y="220" font-weight="600">attempts</text>
+            <text x="425" y="236" fill="#57534a">answer, correct, time</text>
+            <text x="595" y="120" font-weight="600">quizzes</text>
+            <text x="595" y="136" fill="#57534a">+ quiz_questions</text>
+            <text x="595" y="220" font-weight="600">questions</text>
+            <text x="595" y="236" fill="#57534a">draft | approved | retired</text>
+            <text x="255" y="320" font-weight="600">mastery</text>
+            <text x="255" y="336" fill="#57534a">student + topic: score</text>
+            <text x="425" y="320" font-weight="600">topics</text>
+            <text x="425" y="336" fill="#57534a">8 seeded, grade 6-8</text>
+            <text x="595" y="320" font-weight="600">audit_logs</text>
+            <text x="595" y="336" fill="#57534a">hash-chained</text>
+            <text x="85" y="320" font-weight="600" fill="#57534a">refresh_tokens</text>
+            <text x="85" y="336" fill="#57534a">+ reset tokens, ai_calls</text>
+            <g stroke="#6b665d" stroke-width="1.3" fill="none">
+              <path d="M330 56 L90 100" />
+              <path d="M360 56 L270 100" />
+              <path d="M420 56 L425 100" />
+              <path d="M450 56 L595 100" />
+              <path d="M150 123 L190 123" />
+              <path d="M85 146 L85 200" />
+              <path d="M150 223 L190 223" />
+              <path d="M425 146 L425 200" />
+              <path d="M490 223 L530 223" />
+              <path d="M595 146 L595 200" />
+              <path d="M320 323 L360 323" />
+              <path d="M545 246 L490 300" />
+            </g>
+          </g>
+        </svg>
+      </div>
+
+      <h3>Why it is shaped this way</h3>
+      <ul>
+        <li>
+          <b>Relationships are enforced by the database</b> (foreign keys, unique pairs), not just
+          by code. A student can't be enrolled twice in a class; a question can't point to a missing
+          topic.
+        </li>
+        <li>
+          <b>Every lookup column has an index</b>, such as
+          <span class="mono">(student_id, created_at)</span> on attempts.
+        </li>
+        <li>
+          <b>Session state is in the table</b> (<span class="mono">practice_sessions</span>), not in
+          server memory, so a restart or a second API server loses nothing.
+        </li>
+        <li><b>Mastery is stored</b>, not recalculated from every attempt each time.</li>
+        <li>
+          <b
+            ><span class="mono">attempts</span> and <span class="mono">audit_logs</span> only
+            grow</b
+          >. They are append-only and time-indexed, so they can be partitioned or archived later.
+        </li>
+        <li>
+          <b>Demo data:</b> 1 admin, 2 teachers, 30 students and 300 computer-generated questions
+          with worked answers, plus two weeks of practice history. All synthetic.
+        </li>
+      </ul>
+      <p class="why">
+        Redis holds only temporary counters (login rate limits). If it were wiped, nothing important
+        would be lost.
+      </p>
+    </section>
+
+    <!-- ============ SECURITY ============ -->
+    <section class="page">
+      <p class="eyebrow">10 · Security</p>
+      <h2>Protection, layer by layer</h2>
+      <p class="lead">
+        Security was built in from week 1. Each layer assumes the one before it might fail.
+      </p>
+
+      <table>
+        <tr>
+          <th>Layer</th>
+          <th>Control</th>
+          <th>Stops</th>
+        </tr>
+        <tr>
+          <td><b>Network</b></td>
+          <td>
+            Strict security headers (CSP, HSTS, no framing, no sniffing), CORS only for known
+            origins, 100 KB body limit
+          </td>
+          <td>Script injection, clickjacking, oversized requests</td>
+        </tr>
+        <tr>
+          <td><b>Sessions</b></td>
+          <td>
+            15-minute access tokens in memory; rotating refresh tokens in HttpOnly SameSite=Strict
+            cookies; double-submit CSRF token
+          </td>
+          <td>Token theft, forged cross-site requests</td>
+        </tr>
+        <tr>
+          <td><b>Passwords</b></td>
+          <td>
+            Argon2id, 12-character minimum, same response for unknown email and wrong password
+          </td>
+          <td>Cracking after a leak, account discovery</td>
+        </tr>
+        <tr>
+          <td><b>Abuse</b></td>
+          <td>Rate limits per IP and per account on login, signup, reset and join codes (Redis)</td>
+          <td>Brute-force and code guessing</td>
+        </tr>
+        <tr>
+          <td><b>Access</b></td>
+          <td>
+            Role check on every route, plus an ownership check on every route with an ID; the user
+            is re-read from the database on every request
+          </td>
+          <td>Students reading each other's data, stale permissions</td>
+        </tr>
+        <tr>
+          <td><b>Input</b></td>
+          <td>
+            Zod schemas on body, params and query; unknown fields rejected; Prisma only (no
+            hand-built SQL); React escaping
+          </td>
+          <td>Injection of all kinds</td>
+        </tr>
+        <tr>
+          <td><b>Errors</b></td>
+          <td>One safe shape: <span class="mono">{ code, message, requestId }</span></td>
+          <td>Leaking stack traces, SQL or secrets</td>
+        </tr>
+        <tr>
+          <td><b>Records</b></td>
+          <td>Hash-chained audit log with a database trigger</td>
+          <td>Quietly rewriting history</td>
+        </tr>
+        <tr>
+          <td><b>Supply chain</b></td>
+          <td>
+            Dependency audit, CodeQL, secret scanning, Docker image scanning, Dependabot; non-root
+            containers
+          </td>
+          <td>Vulnerable packages, leaked keys</td>
+        </tr>
+      </table>
+
+      <div class="note bad">
+        <p>
+          <b
+            >The most common web bug is a student changing an ID in the address bar to see someone
+            else's data.</b
+          >
+          Here every ID route goes through <span class="mono">services/access.ts</span>, and the
+          tests try exactly that attack for students and teachers and expect a 403.
+        </p>
+      </div>
+      <p>
+        The full control-by-control list, with the OWASP Top 10 mapping and the threat model, is in
+        <span class="mono">SECURITY.md</span>.
+      </p>
+    </section>
+
+    <!-- ============ TESTING ============ -->
+    <section class="page">
+      <p class="eyebrow">11 · Testing and CI/CD</p>
+      <h2>How we know it works</h2>
+
+      <div class="cols">
+        <div>
+          <table>
+            <tr>
+              <th>Suite</th>
+              <th>Tests</th>
+              <th>What it covers</th>
+            </tr>
+            <tr>
+              <td>Shared</td>
+              <td>15</td>
+              <td>Input rules, number parsing</td>
+            </tr>
+            <tr>
+              <td>API</td>
+              <td>128</td>
+              <td>Rules, endpoints, security, a real Postgres database</td>
+            </tr>
+            <tr>
+              <td>Web</td>
+              <td>11</td>
+              <td>Components, tabs, sorting, toasts, login flow</td>
+            </tr>
+          </table>
+          <p>API line coverage is 85%; the requirement is 80%, and the build fails below it.</p>
+        </div>
+        <div>
+          <div class="note ok">
+            <p>
+              <b>All 154 pass</b>, with lint, type-check, formatting and the production build also
+              clean.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <h3>Tests worth knowing about</h3>
+      <ul>
+        <li>
+          <b>The RBAC matrix.</b> A test reads the list of all routes and, for each one, checks a
+          logged-out call gets 401 and every wrong role gets 403. A new endpoint is covered
+          automatically.
+        </li>
+        <li>
+          <b>Ownership attacks.</b> Student A tries to read student B's progress, answer in B's
+          session, or start B's assignment. Teacher A tries teacher B's class and quizzes. All must
+          fail.
+        </li>
+        <li><b>Token theft.</b> Replaying an old refresh token must revoke the family.</li>
+        <li>
+          <b>Tampering.</b> Editing the audit log must be blocked, and detected if the block is
+          bypassed.
+        </li>
+        <li><b>Concurrency.</b> Two simultaneous answers produce exactly one attempt.</li>
+      </ul>
+
+      <h3>The pipeline (GitHub Actions)</h3>
+      <div class="diagram keep">
+        <svg viewBox="0 0 760 110" role="img" aria-label="CI pipeline">
+          <defs>
+            <marker id="c" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+              <path d="M0,0 L7,3.5 L0,7 z" fill="#1c1b17" />
+            </marker>
+          </defs>
+          <g font-size="10.5" text-anchor="middle">
+            <rect x="8" y="30" width="130" height="52" rx="5" fill="#fffefb" stroke="#1c1b17" />
+            <text x="73" y="52" font-weight="600">Pull request</text>
+            <text x="73" y="68" fill="#57534a">opened</text>
+            <rect x="170" y="30" width="150" height="52" rx="5" fill="#fffefb" stroke="#1c1b17" />
+            <text x="245" y="52" font-weight="600">Check</text>
+            <text x="245" y="68" fill="#57534a">format, lint, types, tests</text>
+            <rect x="352" y="30" width="150" height="52" rx="5" fill="#fffefb" stroke="#1c1b17" />
+            <text x="427" y="52" font-weight="600">Scan</text>
+            <text x="427" y="68" fill="#57534a">audit, secrets, CodeQL</text>
+            <rect x="534" y="30" width="110" height="52" rx="5" fill="#fffefb" stroke="#1c1b17" />
+            <text x="589" y="52" font-weight="600">Images</text>
+            <text x="589" y="68" fill="#57534a">build + Trivy</text>
+            <rect x="676" y="30" width="78" height="52" rx="5" fill="#e6f1e9" stroke="#1c1b17" />
+            <text x="715" y="52" font-weight="600">Merge</text>
+            <text x="715" y="68" fill="#57534a">if green</text>
+            <g stroke="#1c1b17" stroke-width="1.4" marker-end="url(#c)">
+              <line x1="138" y1="56" x2="168" y2="56" />
+              <line x1="320" y1="56" x2="350" y2="56" />
+              <line x1="502" y1="56" x2="532" y2="56" />
+              <line x1="644" y1="56" x2="674" y2="56" />
+            </g>
+          </g>
+        </svg>
+      </div>
+      <p>
+        High or critical security findings fail the build. End-to-end browser tests, accessibility
+        scans and a load test arrive in week 4.
+      </p>
+    </section>
+
+    <!-- ============ RUN + DESIGN ============ -->
+    <section class="page">
+      <p class="eyebrow">12 · Running it</p>
+      <h2>Run it yourself</h2>
+      <h3>With Docker (everything at once)</h3>
+      <p>
+        <span class="mono">docker compose -f infra/docker-compose.yml up --build</span> then open
+        <span class="mono">http://localhost:8080</span>. The API applies the database migrations and
+        loads the demo data the first time it starts.
+      </p>
+      <h3>For development (changes appear instantly)</h3>
+      <p>
+        <span class="mono">npm install</span>, copy <span class="mono">.env.example</span> to
+        <span class="mono">.env</span>, start only the databases with
+        <span class="mono">docker compose -f infra/docker-compose.yml up -d postgres redis</span>,
+        then <span class="mono">npm run db:migrate && npm run db:seed && npm run dev</span>. The web
+        app is on port 5173 and the API on 4000.
+      </p>
+
+      <h3>Demo accounts</h3>
+      <table>
+        <tr>
+          <th>Role</th>
+          <th>Email</th>
+          <th>Notes</th>
+        </tr>
+        <tr>
+          <td>Student</td>
+          <td class="mono">student2@learnloop.dev</td>
+          <td>In Grade 7 Maths A, with history</td>
+        </tr>
+        <tr>
+          <td>Student</td>
+          <td class="mono">student1@learnloop.dev</td>
+          <td>Not in a class: try code <span class="mono">GRADE7AA</span></td>
+        </tr>
+        <tr>
+          <td>Teacher</td>
+          <td class="mono">teacher1@learnloop.dev</td>
+          <td>Owns Grade 7 Maths A</td>
+        </tr>
+        <tr>
+          <td>Admin</td>
+          <td class="mono">admin@learnloop.dev</td>
+          <td>Users and audit log</td>
+        </tr>
+      </table>
+      <p>Password for all: <span class="mono">LearnLoop!2026</span></p>
+
+      <h3>Useful commands</h3>
+      <table>
+        <tr>
+          <td class="mono">npm test</td>
+          <td>All 154 tests (needs the database running)</td>
+        </tr>
+        <tr>
+          <td class="mono">npm run lint &amp;&amp; npm run typecheck</td>
+          <td>Code quality checks</td>
+        </tr>
+        <tr>
+          <td class="mono">npx tsx prisma/seed.ts --reset</td>
+          <td>Restore the demo data (run in apps/api)</td>
+        </tr>
+      </table>
+
+      <h2 style="margin-top: 9mm">The design system</h2>
+      <p>
+        The interface follows the conventions of real product UIs rather than a decorative theme.
+        After two earlier attempts that still looked auto-generated, the rules were written down in
+        <span class="mono">docs/design.md</span>.
+      </p>
+      <div class="cols">
+        <div>
+          <ul>
+            <li>
+              <b>App shell:</b> a sidebar with icons and a user menu, which becomes a top bar and
+              drawer on phones.
+            </li>
+            <li>
+              <b>One brand colour:</b> a single blue for actions and the active page, on neutral
+              grays.
+            </li>
+            <li>
+              <b>Colour means state:</b> green is correct or done, red is wrong or at risk, amber is
+              pending.
+            </li>
+          </ul>
+        </div>
+        <div>
+          <ul>
+            <li>
+              <b>Familiar patterns:</b> tabs, searchable and sortable tables, toasts, empty states,
+              and a lesson page with a fixed bottom bar.
+            </li>
+            <li><b>Plain type:</b> the system font, with tabular numbers for figures.</li>
+            <li>
+              <b>Accessible:</b> contrast of at least 4.5:1, keyboard friendly, no sideways
+              scrolling from 360 px up.
+            </li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ SCALE ============ -->
+    <section class="page">
+      <p class="eyebrow">13 · Scaling and next steps</p>
+      <h2>Built to grow, and honest about the limits</h2>
+      <p class="lead">
+        The project rule is to design everything so it still works with far more users: 100,000 or
+        more students, and a whole school logging in at 9:00.
+      </p>
+
+      <h3>Already in place</h3>
+      <ul>
+        <li>
+          <b>Stateless API.</b> Sessions are tokens plus database rows, so more API servers can run
+          behind a load balancer.
+        </li>
+        <li><b>Shared counters in Redis</b>, so rate limits stay correct across servers.</li>
+        <li><b>Pagination</b> on the main lists, and <b>indexes</b> on lookup columns.</li>
+        <li>
+          <b>Safe retries:</b> conditional updates and unique constraints make double clicks and
+          repeated requests harmless.
+        </li>
+        <li><b>Hard limits</b> on page size, body size and login attempts.</li>
+        <li>
+          <b>Readiness checks</b> (<span class="mono">/ready</span>) that test the database and
+          Redis.
+        </li>
+      </ul>
+
+      <h3>Known bottlenecks (to fix before real scale)</h3>
+      <table>
+        <tr>
+          <th>Where</th>
+          <th>Problem at scale</th>
+          <th>Planned fix</th>
+        </tr>
+        <tr>
+          <td>Audit log writes</td>
+          <td>One lock serialises every audited action (each login)</td>
+          <td>Shard the chain, or write through a queue</td>
+        </tr>
+        <tr>
+          <td>Every request</td>
+          <td>One database read to re-check role and status</td>
+          <td>Cache in Redis for about a minute</td>
+        </tr>
+        <tr>
+          <td>Choosing the next question</td>
+          <td>Random pick scans more rows as the bank grows</td>
+          <td>Indexed random key or per-level pools</td>
+        </tr>
+        <tr>
+          <td>Class dashboard</td>
+          <td>Recomputed from scratch on each load</td>
+          <td>Cache per class, or keep running counters</td>
+        </tr>
+        <tr>
+          <td>Big history tables</td>
+          <td>Page-number paging gets slow deep in the list</td>
+          <td>Cursor-based paging</td>
+        </tr>
+        <tr>
+          <td>Container start-up</td>
+          <td>Each replica runs migrations and seeding</td>
+          <td>One migration job at deploy time</td>
+        </tr>
+      </table>
+
+      <h3>What's next</h3>
+      <div class="cols">
+        <div>
+          <p><b>Week 3: AI and the MCP server</b></p>
+          <ul>
+            <li>AI explanations of mistakes and hints that never reveal the answer</li>
+            <li>Teachers can ask AI for draft questions; drafts need approval</li>
+            <li>
+              Personal data removed before any text goes to a model; defence against prompt
+              injection
+            </li>
+            <li>
+              An MCP server with 6 tools so an AI assistant can use the platform, with the same
+              permissions as the user
+            </li>
+            <li>Free Gemini model by default, queued and cached to stay within limits</li>
+          </ul>
+        </div>
+        <div>
+          <p><b>Week 4: hardening and release</b></p>
+          <ul>
+            <li>Browser end-to-end and accessibility tests</li>
+            <li>A load test against the 300 ms target</li>
+            <li>Deploy: front end on Vercel, API and database on Render</li>
+            <li>Demo video and release automation</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+  </body>
+</html>

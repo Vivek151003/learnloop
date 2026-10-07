@@ -7,16 +7,16 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+import { CheckCheck, Clock, Flame, Target } from 'lucide-react';
 import type { ProgressDto } from '@learnloop/shared';
-import { EmptyState, Meter, Panel, PanelHeader, StatStrip } from './ui';
+import { Card, CardHeader, EmptyState, ProgressBar, StatCard } from './ui';
 import { duration, pct, shortDate } from '../lib/format';
 
-const INK = '#1C1B17';
-const RULE = '#E3DED2';
-const MUTED = '#6B665D';
-const MONO = '"IBM Plex Mono", ui-monospace, monospace';
+const BRAND = '#2457E6';
+const GRID = '#E4E7EC';
+const MUTED = '#667085';
 
-/** FR-15: mastery per topic, streak, accuracy trend and time spent. Shared by student and teacher views. */
+/** FR-15: mastery per topic, streak, accuracy trend and time spent. Shared by the student and teacher views. */
 export function ProgressView({ progress }: { progress: ProgressDto }) {
   const trend = progress.trend.map((t) => ({
     ...t,
@@ -27,122 +27,123 @@ export function ProgressView({ progress }: { progress: ProgressDto }) {
   const activeDays = progress.trend.filter((t) => t.attempts > 0).length;
 
   return (
-    <div className="space-y-8">
-      <StatStrip
-        items={[
-          {
-            label: 'Streak',
-            value: `${progress.streakDays}d`,
-            note: 'days in a row with practice',
-          },
-          { label: 'Correct', value: pct(progress.accuracy), note: 'of all answers' },
-          { label: 'Answered', value: progress.totalAttempts, note: 'questions in total' },
-          { label: 'Time', value: duration(progress.timeSpentMs), note: 'spent answering' },
-        ]}
-      />
+    <div className="space-y-6">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <StatCard label="Day streak" value={progress.streakDays} icon={Flame} tone="warning" />
+        <StatCard label="Accuracy" value={pct(progress.accuracy)} icon={Target} tone="success" />
+        <StatCard label="Questions answered" value={progress.totalAttempts} icon={CheckCheck} />
+        <StatCard label="Time practising" value={duration(progress.timeSpentMs)} icon={Clock} />
+      </div>
 
       {progress.totalAttempts === 0 ? (
-        <EmptyState
-          title="No practice yet"
-          description="Answer a few questions and mastery by topic will show up here."
-        />
+        <Card>
+          <EmptyState
+            icon={Target}
+            title="No practice yet"
+            description="Answer a few questions and mastery by topic will show up here."
+          />
+        </Card>
       ) : (
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
-          <Panel as="section">
-            <PanelHeader title="Mastery by topic" meta="0–100%, recent answers count most" />
-            <ul className="divide-y divide-rule">
+        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
+          <Card>
+            <CardHeader title="Mastery by topic" description="Recent answers count the most" />
+            <ul className="divide-y divide-gray-100">
               {mastery.map((m) => (
-                <li
-                  key={m.topicId}
-                  className="grid grid-cols-[minmax(0,1fr)_3rem] items-center gap-x-4 gap-y-1.5 px-5 py-3"
-                >
-                  <span className="truncate text-sm">{m.topicName}</span>
-                  <span className="text-right font-mono text-sm tabular-nums">{pct(m.score)}</span>
-                  <Meter
+                <li key={m.topicId} className="px-5 py-3.5">
+                  <div className="mb-2 flex items-baseline justify-between gap-3">
+                    <span className="font-medium text-gray-900">{m.topicName}</span>
+                    <span className="tabular text-gray-500">
+                      <span className="font-medium text-gray-900">{pct(m.score)}</span> ·{' '}
+                      {m.attempts} answered
+                    </span>
+                  </div>
+                  <ProgressBar
                     value={m.score}
                     label={`${m.topicName} mastery`}
-                    tone={m.score >= 0.7 ? 'right' : m.score < 0.4 ? 'wrong' : 'ink'}
+                    tone={m.score >= 0.7 ? 'success' : m.score < 0.4 ? 'danger' : 'brand'}
                   />
-                  <span className="text-right font-mono text-2xs text-ink-3">{m.attempts} ans</span>
                 </li>
               ))}
             </ul>
-          </Panel>
+          </Card>
 
-          <Panel as="section">
-            <PanelHeader
-              title="Accuracy, last 14 days"
-              meta={`${activeDays} active day${activeDays === 1 ? '' : 's'}`}
+          <Card>
+            <CardHeader
+              title="Accuracy over time"
+              description={`Last 14 days · ${activeDays} active day${activeDays === 1 ? '' : 's'}`}
             />
             <div
-              className="h-64 px-2 pb-2 pt-4"
+              className="h-64 px-2 pb-2 pt-5"
               role="img"
-              aria-label="Line chart of daily accuracy over the last 14 days. Daily values are in the table below."
+              aria-label="Line chart of daily accuracy over the last 14 days. The daily numbers are listed below."
             >
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={trend} margin={{ left: -12, right: 16, top: 8, bottom: 0 }}>
-                  <CartesianGrid stroke={RULE} vertical={false} />
+                  <CartesianGrid stroke={GRID} vertical={false} />
                   <XAxis
                     dataKey="label"
                     stroke={MUTED}
                     tickLine={false}
-                    axisLine={{ stroke: RULE }}
-                    tick={{ fontSize: 11, fontFamily: MONO }}
+                    axisLine={{ stroke: GRID }}
+                    tick={{ fontSize: 12 }}
                     interval="preserveStartEnd"
                   />
                   <YAxis
                     domain={[0, 100]}
-                    ticks={[0, 50, 100]}
+                    ticks={[0, 25, 50, 75, 100]}
                     tickFormatter={(v) => `${v}%`}
                     stroke={MUTED}
                     tickLine={false}
                     axisLine={false}
-                    tick={{ fontSize: 11, fontFamily: MONO }}
+                    tick={{ fontSize: 12 }}
                   />
                   <Tooltip
-                    cursor={{ stroke: RULE }}
+                    cursor={{ stroke: GRID }}
                     contentStyle={{
-                      border: `1px solid ${RULE}`,
-                      borderRadius: 6,
-                      fontFamily: MONO,
+                      border: `1px solid ${GRID}`,
+                      borderRadius: 8,
                       fontSize: 12,
-                      boxShadow: 'none',
+                      boxShadow: '0 4px 12px rgba(16,24,40,0.1)',
                     }}
                     formatter={(v, _n, item) => [
-                      `${v}% of ${(item.payload as { attempts: number }).attempts}`,
+                      `${v}% of ${(item.payload as { attempts: number }).attempts} answered`,
                       'Correct',
                     ]}
                   />
                   <Line
                     type="linear"
                     dataKey="accuracyPct"
-                    stroke={INK}
-                    strokeWidth={1.75}
-                    dot={{ r: 3, fill: '#F2C230', stroke: INK, strokeWidth: 1.5 }}
-                    activeDot={{ r: 4 }}
+                    stroke={BRAND}
+                    strokeWidth={2}
+                    dot={{ r: 3, fill: '#fff', stroke: BRAND, strokeWidth: 2 }}
+                    activeDot={{ r: 5 }}
                     connectNulls
                     isAnimationActive={false}
                   />
                 </LineChart>
               </ResponsiveContainer>
             </div>
-            <details className="border-t border-rule px-5 py-3 text-sm">
-              <summary className="cursor-pointer text-ink-2">Daily numbers</summary>
-              <table className="mt-2 w-full font-mono text-xs">
+            <details className="border-t border-gray-200 px-5 py-3 text-sm">
+              <summary className="cursor-pointer font-medium text-gray-600">
+                View daily numbers
+              </summary>
+              <table className="mt-3 w-full text-sm tabular">
                 <tbody>
                   {trend
                     .filter((t) => t.attempts > 0)
                     .map((t) => (
-                      <tr key={t.date} className="border-t border-rule">
-                        <td className="py-1.5">{t.label}</td>
-                        <td className="py-1.5 text-right">{t.attempts} answered</td>
-                        <td className="py-1.5 text-right">{t.accuracyPct}%</td>
+                      <tr key={t.date} className="border-t border-gray-100">
+                        <td className="py-1.5 text-gray-600">{t.label}</td>
+                        <td className="py-1.5 text-right text-gray-500">{t.attempts} answered</td>
+                        <td className="py-1.5 text-right font-medium text-gray-900">
+                          {t.accuracyPct}%
+                        </td>
                       </tr>
                     ))}
                 </tbody>
               </table>
             </details>
-          </Panel>
+          </Card>
         </div>
       )}
     </div>

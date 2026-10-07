@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { GraduationCap, ShieldCheck, Users } from 'lucide-react';
 import { loginSchema } from '@learnloop/shared';
 import { Alert, Button, Input } from '../../components/ui';
 import { errorMessage } from '../../lib/api';
@@ -7,9 +8,9 @@ import { homeFor, useAuth } from '../../lib/auth';
 import { AuthShell } from './AuthShell';
 
 const DEMO = [
-  { role: 'Student', email: 'student2@learnloop.dev' },
-  { role: 'Teacher', email: 'teacher1@learnloop.dev' },
-  { role: 'Admin', email: 'admin@learnloop.dev' },
+  { role: 'Student', email: 'student2@learnloop.dev', icon: GraduationCap },
+  { role: 'Teacher', email: 'teacher1@learnloop.dev', icon: Users },
+  { role: 'Admin', email: 'admin@learnloop.dev', icon: ShieldCheck },
 ];
 const DEMO_PASSWORD = 'LearnLoop!2026';
 
@@ -48,59 +49,69 @@ export function LoginPage() {
   return (
     <AuthShell
       title="Log in"
-      subtitle="Pick up where you left off."
+      subtitle="Enter your email and password to continue."
       footer={
         <>
-          No account yet?{' '}
-          <Link className="link" to="/register">
-            Create one
+          Don’t have an account?{' '}
+          <Link className="font-medium text-brand-700 hover:underline" to="/register">
+            Sign up
           </Link>
         </>
       }
     >
       <form className="space-y-4" onSubmit={onSubmit} noValidate>
-        {error && <Alert tone="wrong">{error}</Alert>}
+        {error && <Alert tone="danger">{error}</Alert>}
         <Input
           label="Email"
           type="email"
           autoComplete="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          required
+          placeholder="you@school.org"
         />
-        <Input
-          label="Password"
-          type="password"
-          autoComplete="current-password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
-        <div className="-mt-1 flex justify-end">
-          <Link to="/forgot-password" className="link text-sm">
-            Forgot password?
-          </Link>
+        <div>
+          <Input
+            label="Password"
+            type="password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          <div className="mt-2 text-right">
+            <Link
+              to="/forgot-password"
+              className="text-sm font-medium text-brand-700 hover:underline"
+            >
+              Forgot password?
+            </Link>
+          </div>
         </div>
-        <Button type="submit" className="w-full" loading={busy}>
+        <Button type="submit" size="lg" className="w-full" loading={busy}>
           Log in
         </Button>
       </form>
-      <div className="mt-8 border-t border-rule pt-6">
-        <p className="eyebrow">Or look around as</p>
-        <div className="mt-3 grid grid-cols-3 gap-2">
-          {DEMO.map((d) => (
-            <Button
-              key={d.role}
-              type="button"
-              variant="secondary"
-              size="sm"
-              disabled={busy}
-              onClick={() => void signIn({ email: d.email, password: DEMO_PASSWORD })}
-            >
-              {d.role}
-            </Button>
-          ))}
+
+      <div className="relative my-7">
+        <div className="absolute inset-0 flex items-center" aria-hidden="true">
+          <div className="w-full border-t border-gray-200" />
         </div>
+        <p className="relative mx-auto w-fit bg-white px-3 text-sm text-gray-500">
+          Or try a demo account
+        </p>
+      </div>
+      <div className="grid grid-cols-3 gap-2">
+        {DEMO.map(({ role, email: demoEmail, icon }) => (
+          <Button
+            key={role}
+            type="button"
+            variant="secondary"
+            icon={icon}
+            disabled={busy}
+            onClick={() => void signIn({ email: demoEmail, password: DEMO_PASSWORD })}
+          >
+            {role}
+          </Button>
+        ))}
       </div>
     </AuthShell>
   );

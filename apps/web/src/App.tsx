@@ -46,9 +46,10 @@ export function App() {
           </Route>
         </Route>
         <Route element={<RequireRole roles={['student']} />}>
+          {/* The lesson screen is full-screen, without the app shell. */}
+          <Route path="/student/practice/:sessionId" element={<PracticePage />} />
           <Route element={<Layout />}>
             <Route path="/student" element={<StudentHome />} />
-            <Route path="/student/practice/:sessionId" element={<PracticePage />} />
             <Route path="/student/progress" element={<ProgressPage />} />
           </Route>
         </Route>

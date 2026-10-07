@@ -1,41 +1,82 @@
 /**
- * LearnLoop design tokens (NFR-1). See docs/design.md for the reasoning.
- * Direction: an exercise book. Warm paper, black ink, one pencil-yellow highlight,
- * red and green reserved for marking answers. Rules instead of shadows.
+ * LearnLoop design tokens (NFR-1). See docs/design.md.
+ * A conventional product UI: neutral grays, one blue brand colour, semantic
+ * green/red/amber used only for state. The default Tailwind palette is replaced
+ * so off-system colours can't creep in.
  */
 /** @type {import('tailwindcss').Config} */
 export default {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {
-    // Replace (not extend) the palette so off-system colours can't creep in.
     colors: {
       transparent: 'transparent',
       current: 'currentColor',
       white: '#FFFFFF',
       black: '#000000',
-      paper: { DEFAULT: '#F6F4EE', raised: '#FFFEFB', sunken: '#EFEBE2' },
-      // ink.4 is for hairlines and icons only: it fails text contrast.
-      ink: { DEFAULT: '#1C1B17', 2: '#57534A', 3: '#6B665D', 4: '#9A948A' },
-      rule: { DEFAULT: '#E3DED2', strong: '#CDC6B6' },
-      pencil: { DEFAULT: '#F2C230', soft: '#FBEFC4', deep: '#7A5800' },
-      // Not `right`/`wrong`: `text-right` already means text-align in Tailwind.
-      correct: { DEFAULT: '#276B43', soft: '#E6F1E9' },
-      incorrect: { DEFAULT: '#B23A26', soft: '#F8E5E0' },
+      gray: {
+        25: '#FCFCFD',
+        50: '#F9FAFB',
+        100: '#F2F4F7',
+        200: '#E4E7EC',
+        300: '#D0D5DD',
+        400: '#98A2B3',
+        500: '#667085',
+        600: '#475467',
+        700: '#344054',
+        800: '#1D2939',
+        900: '#101828',
+      },
+      brand: {
+        50: '#EFF4FF',
+        100: '#DCE7FF',
+        200: '#B8CEFF',
+        500: '#3D6CF0',
+        600: '#2457E6',
+        700: '#1B45BF',
+      },
+      success: { 50: '#ECFDF3', 100: '#D1FADF', 500: '#17B26A', 600: '#067647', 700: '#05603A' },
+      danger: { 50: '#FEF3F2', 100: '#FEE4E2', 500: '#F04438', 600: '#D92D20', 700: '#B42318' },
+      warning: { 50: '#FFFAEB', 100: '#FEF0C7', 500: '#F79009', 600: '#B54708', 700: '#93370D' },
     },
     fontFamily: {
-      sans: ['"IBM Plex Sans"', 'system-ui', 'sans-serif'],
-      serif: ['"Source Serif 4 Variable"', 'Georgia', 'serif'],
-      mono: ['"IBM Plex Mono"', 'ui-monospace', 'monospace'],
+      // System fonts: SF Pro on macOS/iOS, Segoe UI on Windows, Roboto on Android.
+      sans: [
+        'ui-sans-serif',
+        'system-ui',
+        '-apple-system',
+        'BlinkMacSystemFont',
+        '"Segoe UI"',
+        'Roboto',
+        '"Helvetica Neue"',
+        'Arial',
+        'sans-serif',
+      ],
+      mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Consolas', 'monospace'],
     },
-    borderRadius: { none: '0', sm: '3px', DEFAULT: '6px', md: '8px', full: '9999px' },
+    borderRadius: {
+      none: '0',
+      sm: '4px',
+      DEFAULT: '6px',
+      md: '8px',
+      lg: '10px',
+      xl: '12px',
+      full: '9999px',
+    },
     extend: {
-      fontSize: { '2xs': ['0.6875rem', { lineHeight: '1rem' }] },
       boxShadow: {
-        // Tactile "key" buttons: a solid ledge instead of a blurred glow.
-        key: '0 2px 0 0 #000000',
-        'key-light': '0 2px 0 0 #CDC6B6',
-        pop: '0 12px 32px -12px rgba(28,27,23,0.28)',
+        xs: '0 1px 2px rgba(16,24,40,0.05)',
+        sm: '0 1px 3px rgba(16,24,40,0.08), 0 1px 2px rgba(16,24,40,0.04)',
+        lg: '0 12px 24px -4px rgba(16,24,40,0.12), 0 4px 8px -2px rgba(16,24,40,0.05)',
+        focus: '0 0 0 4px rgba(36,87,230,0.18)',
       },
+      keyframes: {
+        'slide-up': { from: { transform: 'translateY(100%)' }, to: { transform: 'translateY(0)' } },
+        'toast-in': {
+          from: { opacity: '0', transform: 'translateY(8px)' },
+          to: { opacity: '1', transform: 'translateY(0)' },
+        },
+      },
+      animation: { 'slide-up': 'slide-up 180ms ease-out', 'toast-in': 'toast-in 160ms ease-out' },
     },
   },
   plugins: [],

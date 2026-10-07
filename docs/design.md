@@ -1,50 +1,66 @@
 # Design system
 
-LearnLoop should look like a tool a developer and a teacher designed on purpose, not an
-average of every SaaS template. Every visual default below is a decision, with the reason.
+LearnLoop should look like a product a front-end team built and shipped: familiar structure,
+consistent components, and no decoration that doesn't do a job.
 
-## Direction: an exercise book
+## History (and why it changed)
 
-Maths practice happens on paper. The UI borrows from that: a warm paper background, black ink,
-one highlighter colour, and red and green used the way a teacher's pen uses them, only to mark work.
+1. **v1** used default Tailwind indigo, Inter, soft shadows, a gradient hero card and pill badges.
+   It read as an AI-generated template.
+2. **v2** swapped that for a themed "exercise book" look (beige paper, serif headings, mono
+   labels, coloured left borders). It was distinctive but still read as an art-directed concept,
+   not a working app.
+3. **v3 (current)** drops the theme and follows the conventions of real product UIs: an app shell,
+   neutral grays, one brand colour, real icons, and the interaction patterns users already know.
 
-References studied: Brilliant (serif headlines, tactile black buttons, near-monochrome), Linear
-(dense lists, hairline rules, restraint), Khan Academy (clear mastery language).
+References: Linear and Stripe (restrained neutrals, dense tables), Duolingo and Khan Academy
+(lesson screen: close and progress on top, fixed bottom action bar), and teacher dashboards
+generally (class overview plus a student drill-down, with at-risk students ranked first).
+
+## Structure
+
+| Pattern           | Where                                                                                                         |
+| ----------------- | ------------------------------------------------------------------------------------------------------------- |
+| **App shell**     | Fixed left sidebar with icons and a user menu; top bar and drawer below 1024 px                               |
+| **Page header**   | Breadcrumbs, title, one-line description, primary actions on the right                                        |
+| **Tabs**          | Class page: Overview, Students, Assignments                                                                   |
+| **Lesson screen** | Full-screen: close and progress bar on top, one question, fixed bottom bar (Check, then marking and Continue) |
+| **Tables**        | Search and filters in a toolbar, sortable headers, row hover, avatars, inline progress bars, pagination       |
+| **Feedback**      | Toasts for confirmations, inline alerts for form errors, empty states with an icon and a next step            |
 
 ## Tokens (`apps/web/tailwind.config.js`)
 
-| Token             | Value                 | Use                                                 |
-| ----------------- | --------------------- | --------------------------------------------------- |
-| `paper`           | `#F6F4EE`             | Page background                                     |
-| `paper.raised`    | `#FFFEFB`             | Panels, inputs                                      |
-| `ink`             | `#1C1B17`             | Text, primary buttons, focus ring                   |
-| `ink.2` / `ink.3` | `#57534A` / `#6B665D` | Secondary text (both ≥ 4.5:1 on paper)              |
-| `rule`            | `#E3DED2`             | Dividers and borders (no drop shadows on panels)    |
-| `pencil`          | `#F2C230`             | The only highlight: current item, progress, mastery |
-| `right` / `wrong` | `#276B43` / `#B23A26` | Marking answers and risk. Never decoration          |
+The Tailwind palette is **replaced**, not extended, so only these colours exist.
 
-The Tailwind palette is **replaced**, not extended, so `indigo-600` and friends don't exist.
-Colour names must not collide with Tailwind utilities: `right` was renamed to `correct` because
-`text-right` already means right-aligned text.
+| Token     | Use                                                                    |
+| --------- | ---------------------------------------------------------------------- |
+| `gray`    | 25–900 neutral scale. Page `gray-50`, panels white, borders `gray-200` |
+| `brand`   | One blue: `brand-600` `#2457E6` for actions, links and active nav      |
+| `success` | Correct answers, completed work, healthy mastery                       |
+| `danger`  | Incorrect answers, overdue work, at-risk students, destructive actions |
+| `warning` | Due soon, drafts, in-between mastery                                   |
 
-## Type
+- Type: the system font stack (SF Pro, Segoe UI, Roboto). 14 px base, `tabular-nums` on figures.
+  Monospace only for class codes and audit log data.
+- Radius 6 px on controls, 8 px on panels, full on pills and avatars. Panels use a 1 px border
+  and a barely visible shadow.
+- Icons: Lucide, always with a visible label or an `aria-label`.
+- Every text colour pair meets WCAG AA (≥ 4.5:1). `gray-400` is for icons and hairlines only.
 
-- **Source Serif 4** for page titles and questions. A question should read like a textbook.
-- **IBM Plex Sans** for the interface.
-- **IBM Plex Mono** for numbers, codes, timestamps and small labels (`.eyebrow`). Join codes,
-  scores and counts line up in tables.
-- All fonts are self-hosted (Fontsource), so the CSP stays `'self'`.
+## Components (`components/ui.tsx`, `components/toast.tsx`)
 
-## Shape
+Button, ButtonLink, IconButton, Card, CardHeader, PageHeader, Input, Select, TextArea,
+SearchInput, FilterSelect, Badge, Avatar, StatCard, ProgressBar, Table helpers (`TableWrap`,
+`Th`, `SortTh`, `Td`, `Pager`), Tabs, Modal, Alert, EmptyState, ErrorState, LoadingBlock, Code,
+Toast. Pages build only from these.
 
-- Radius 6px on panels and controls, 3px on small tags. No pill-everything.
-- Panels have a 1px rule and no shadow. The only shadow is the solid 2px "key" ledge under
-  buttons, which presses down on click.
-- Lists and tables over card grids. Stats sit in one strip divided by rules, not four boxes.
+## Rules
 
-## Rules of thumb
-
-- No gradients, glow, emoji icons, or "Live"/"New" pills.
-- Colour carries meaning: yellow = you are here / progress, green = correct, red = wrong or at risk.
-- Copy is specific ("2 days overdue", "Q4 of 10") rather than cheerful filler.
-- Every screen still has loading, empty and error states, and works from 360px.
+- No gradients or glows; no coloured side-border cards; no decorative badges ("New", "Live").
+- Colour means state. Green is correct or done, red is wrong or at risk, amber is pending.
+- Copy is plain and specific ("Due in 5 days", "3 of 10 answered"), not cheerful filler.
+- Every screen has loading, empty and error states, and works from 360 px with no sideways scroll.
+- Responsive grids need an explicit `grid-cols-1` base, otherwise a wide child can stretch the
+  page on phones.
+- Keyboard: visible focus ring everywhere, skip link, A–D keys on multiple-choice questions,
+  `aria-live` marking, `aria-sort` on sortable columns.

@@ -107,7 +107,7 @@ Password for every account: `LearnLoop!2026`. `admin@learnloop.dev`, `teacher1@l
 - API: auth (argon2id, JWT + rotating refresh, CSRF, rate limits), classes, questions, quizzes,
   assignments, adaptive practice, progress, admin, hash-chained audit log, OpenAPI at `/api/docs`
 - Web: all student, teacher and admin pages plus profile; initial JS 46 KB gzip
-- Tests: 149 passing (shared 15, api 128 at 85% line coverage, web 6); lint, typecheck, format, build green
+- Tests: 154 passing (shared 15, api 128 at 85% line coverage, web 11); lint, typecheck, format, build green
 - Docker: `docker compose -f infra/docker-compose.yml up --build` → http://localhost:8080 (verified)
 - CI: ci.yml (lint/type/test/build, npm audit, gitleaks, Trivy), codeql.yml, dependabot.yml, PR template
 - Docs: README, SECURITY.md, AI-WORKFLOW.md, ADR-001..003
@@ -116,23 +116,25 @@ Password for every account: `LearnLoop!2026`. `admin@learnloop.dev`, `teacher1@l
 - Git: repo initialised on `main` with 13 logical commits (nothing pushed; no remote yet).
 - `deepmerge-ts` overridden to ^8 in the root package.json to clear a Prisma high-severity advisory.
 
-## UI redesign: DONE (2026-10-06)
+## UI: conventional product design, v3 (2026-10-06)
 
-The web UI was redesigned so it doesn't read as AI-generated. Rules and tokens live in
-`docs/design.md`: an exercise-book look with paper, ink, a pencil-yellow highlight, and
-`correct`/`incorrect` colours used only for marking. Fonts are Source Serif 4 and IBM Plex Sans/Mono,
-self-hosted. Corners are small, rules replace shadows, and lists replace card grids.
+The first two designs still read as AI-made (default indigo/Inter template, then a themed
+"exercise book" look). v3 follows real product conventions. Rules, tokens and history are in
+`docs/design.md`; read it before touching the UI.
 
-- The Tailwind palette is **replaced**: only `paper`, `ink`, `rule`, `pencil`, `correct`, `incorrect` exist.
-  Never name a colour after a utility (`right` clashed with `text-right`).
-- Components (`components/ui.tsx`): Panel, PanelHeader, PageHeader(eyebrow), SectionTitle, StatStrip,
-  Tag, Status, Meter, Alert, Code, TextArea. Component `tone` props still use the values `right`/`wrong`/`pencil`;
-  they map to the `correct`/`incorrect`/`pencil` colour classes inside `ui.tsx`.
-- Checked at 360 and 390 px with a Playwright script (scratchpad, not committed). All 11 pages
-  have no horizontal overflow. Fixed a bug where sr-only text inside tables widened the page
-  (`TableWrap` is now `relative`). Port this check into Week 4 E2E (TST-4/NFR-4).
-- The Docker login rate limit (20 per IP / 10 per account per 15 min) trips during repeated
-  browser checks. Clear local counters with:
+- Palette is **replaced**: only `gray`, `brand` (blue), `success`, `danger`, `warning`. System font stack.
+  Icons come from `lucide-react`. No gradients, no side-border cards, no decorative badges.
+- App shell in `components/Layout.tsx` (sidebar, user menu, mobile drawer). The lesson screen
+  (`/student/practice/:id`) is outside the shell, with a fixed bottom Check/Continue bar.
+- Pages build only from `components/ui.tsx` plus `components/toast.tsx` (`useToast`). Tables use
+  `SortTh` with `useSort` + `sortRows` (client-side) or server pagination (`Pager`).
+- Every responsive `grid` needs `grid-cols-1` as the base, or it overflows on phones.
+- Login/register show `apps/web/public/preview.jpg`, a real screenshot of the class dashboard.
+  Recapture it (Playwright, 1280x800 at 1.5x) whenever the dashboard changes noticeably.
+- Phone-width check: a Playwright script (kept in the session scratchpad, not in the repo) logs in
+  as each role and checks `scrollWidth <= innerWidth` at 360 and 390 px on all pages. All 22 pass.
+  Port it into Week 4 E2E (TST-4/NFR-4).
+- The Docker login rate limit trips during repeated browser checks. Clear local counters with:
   `docker exec learnloop-redis-1 sh -c "redis-cli --scan --pattern 'rl:*' | xargs -r redis-cli del"`
 
 ## Next steps

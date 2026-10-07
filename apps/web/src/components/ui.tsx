@@ -10,42 +10,55 @@ import {
   type TextareaHTMLAttributes,
 } from 'react';
 import { Link } from 'react-router-dom';
+import {
+  ArrowDown,
+  ArrowUp,
+  ChevronsUpDown,
+  CircleAlert,
+  CircleCheck,
+  Info,
+  Search,
+  TriangleAlert,
+  X,
+  type LucideIcon,
+} from 'lucide-react';
 import { errorMessage } from '../lib/api';
 
-// The design system (NFR-1, docs/design.md). Every page builds from these pieces,
-// so type, spacing, colour and states stay consistent across all three roles.
+// The design system (NFR-1, docs/design.md). Pages build from these pieces, so
+// type, spacing, colour and states stay consistent across all three roles.
 
 export const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(' ');
 
-type Variant = 'primary' | 'secondary' | 'quiet' | 'danger';
+/* ------------------------------------------------------------------ Buttons */
+
+type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
 type Size = 'sm' | 'md' | 'lg';
 
-// Tactile "key" buttons: a solid ledge that presses down, instead of a blurred shadow.
 const variants: Record<Variant, string> = {
-  primary:
-    'bg-ink text-white shadow-key hover:bg-black active:translate-y-[2px] active:shadow-none disabled:bg-ink-4 disabled:shadow-none',
+  primary: 'bg-brand-600 text-white shadow-xs hover:bg-brand-700 disabled:bg-brand-200',
   secondary:
-    'border border-rule-strong bg-paper-raised text-ink shadow-key-light hover:border-ink-3 active:translate-y-[2px] active:shadow-none disabled:text-ink-3',
-  quiet: 'text-ink-2 hover:bg-paper-sunken hover:text-ink disabled:text-ink-4',
-  danger:
-    'bg-incorrect text-white shadow-[0_2px_0_0_#7A2416] hover:brightness-95 active:translate-y-[2px] active:shadow-none disabled:opacity-50',
+    'border border-gray-300 bg-white text-gray-700 shadow-xs hover:bg-gray-50 disabled:text-gray-400 disabled:hover:bg-white',
+  ghost:
+    'text-gray-600 hover:bg-gray-100 hover:text-gray-900 disabled:text-gray-400 disabled:hover:bg-transparent',
+  danger: 'bg-danger-600 text-white shadow-xs hover:bg-danger-700 disabled:opacity-50',
 };
 const sizes: Record<Size, string> = {
-  sm: 'h-8 px-3 text-sm',
-  md: 'h-10 px-4 text-sm',
-  lg: 'h-12 px-6 text-base',
+  sm: 'h-8 gap-1.5 px-3 text-sm',
+  md: 'h-9 gap-2 px-3.5 text-sm',
+  lg: 'h-11 gap-2 px-5 text-base',
 };
 const buttonBase =
-  'inline-flex select-none items-center justify-center gap-2 rounded font-medium transition-[transform,box-shadow,background-color] duration-75 disabled:cursor-not-allowed';
+  'inline-flex shrink-0 select-none items-center justify-center whitespace-nowrap rounded-md font-medium transition-colors disabled:cursor-not-allowed';
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;
   size?: Size;
   loading?: boolean;
+  icon?: LucideIcon;
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
-  { variant = 'primary', size = 'md', loading, disabled, className, children, ...rest },
+  { variant = 'primary', size = 'md', loading, disabled, icon: Icon, className, children, ...rest },
   ref,
 ) {
   return (
@@ -56,7 +69,11 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       className={cx(buttonBase, sizes[size], variants[variant], className)}
       {...rest}
     >
-      {loading && <Spinner className="h-4 w-4" />}
+      {loading ? (
+        <Spinner className="h-4 w-4" />
+      ) : Icon ? (
+        <Icon className="h-4 w-4" aria-hidden="true" />
+      ) : null}
       {children}
     </button>
   );
@@ -66,19 +83,44 @@ export function ButtonLink({
   to,
   variant = 'primary',
   size = 'md',
+  icon: Icon,
   className,
   children,
 }: {
   to: string;
   variant?: Variant;
   size?: Size;
+  icon?: LucideIcon;
   className?: string;
   children: ReactNode;
 }) {
   return (
     <Link to={to} className={cx(buttonBase, sizes[size], variants[variant], className)}>
+      {Icon && <Icon className="h-4 w-4" aria-hidden="true" />}
       {children}
     </Link>
+  );
+}
+
+export function IconButton({
+  icon: Icon,
+  label,
+  className,
+  ...rest
+}: ButtonHTMLAttributes<HTMLButtonElement> & { icon: LucideIcon; label: string }) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      className={cx(
+        'inline-flex h-8 w-8 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-900',
+        className,
+      )}
+      {...rest}
+    >
+      <Icon className="h-4 w-4" aria-hidden="true" />
+    </button>
   );
 }
 
@@ -94,98 +136,102 @@ export function Spinner({ className }: { className?: string }) {
         cy="12"
         r="9"
         stroke="currentColor"
-        strokeWidth="2.5"
+        strokeWidth="3"
         fill="none"
         opacity="0.25"
       />
-      <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="2.5" fill="none" />
+      <path
+        d="M21 12a9 9 0 0 0-9-9"
+        stroke="currentColor"
+        strokeWidth="3"
+        fill="none"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
 
-/** A bordered sheet. No shadow: separation comes from the rule and the paper tone. */
-export function Panel({
-  className,
-  children,
-  as: Tag = 'div',
-}: {
-  className?: string;
-  children: ReactNode;
-  as?: 'div' | 'section';
-}) {
-  return (
-    <Tag className={cx('rounded border border-rule bg-paper-raised', className)}>{children}</Tag>
-  );
-}
+/* ------------------------------------------------------------------- Layout */
 
-/** Panel with standard padding. Kept for pages that want a simple padded block. */
 export function Card({ className, children }: { className?: string; children: ReactNode }) {
-  return <Panel className={cx('p-5', className)}>{children}</Panel>;
-}
-
-/** A panel header row: small title on the left, optional actions on the right. */
-export function PanelHeader({
-  title,
-  meta,
-  actions,
-}: {
-  title: ReactNode;
-  meta?: ReactNode;
-  actions?: ReactNode;
-}) {
   return (
-    <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-rule px-5 py-3">
-      <h2 className="text-sm font-semibold">{title}</h2>
-      {meta && <span className="text-sm text-ink-3">{meta}</span>}
-      {actions}
+    <div className={cx('rounded-lg border border-gray-200 bg-white shadow-xs', className)}>
+      {children}
     </div>
   );
 }
 
-export function PageHeader({
-  eyebrow,
+export function CardHeader({
   title,
-  subtitle,
+  description,
   actions,
 }: {
-  eyebrow?: ReactNode;
   title: ReactNode;
-  subtitle?: ReactNode;
+  description?: ReactNode;
   actions?: ReactNode;
 }) {
   return (
-    <header className="mb-8 flex flex-col gap-4 border-b border-rule pb-6 sm:flex-row sm:items-end sm:justify-between">
+    <div className="flex flex-wrap items-start justify-between gap-3 border-b border-gray-200 px-5 py-4">
       <div className="min-w-0">
-        {eyebrow && <p className="eyebrow mb-2">{eyebrow}</p>}
-        <h1 className="font-serif text-[2rem] font-semibold leading-tight tracking-[-0.01em]">
-          {title}
-        </h1>
-        {subtitle && <p className="mt-2 text-ink-2">{subtitle}</p>}
+        <h2 className="text-base font-semibold text-gray-900">{title}</h2>
+        {description && <p className="mt-0.5 text-sm text-gray-500">{description}</p>}
       </div>
-      {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
+      {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
+    </div>
+  );
+}
+
+export interface Crumb {
+  label: string;
+  to?: string;
+}
+
+export function PageHeader({
+  title,
+  description,
+  actions,
+  breadcrumbs,
+}: {
+  title: ReactNode;
+  description?: ReactNode;
+  actions?: ReactNode;
+  breadcrumbs?: Crumb[];
+}) {
+  return (
+    <header className="mb-6">
+      {breadcrumbs && (
+        <nav
+          aria-label="Breadcrumb"
+          className="mb-2 flex items-center gap-1.5 text-sm text-gray-500"
+        >
+          {breadcrumbs.map((c, i) => (
+            <span key={c.label} className="flex items-center gap-1.5">
+              {i > 0 && <span aria-hidden="true">/</span>}
+              {c.to ? (
+                <Link to={c.to} className="hover:text-gray-900 hover:underline">
+                  {c.label}
+                </Link>
+              ) : (
+                <span className="text-gray-700" aria-current="page">
+                  {c.label}
+                </span>
+              )}
+            </span>
+          ))}
+        </nav>
+      )}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-semibold tracking-tight text-gray-900">{title}</h1>
+          {description && <p className="mt-1 text-gray-500">{description}</p>}
+        </div>
+        {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+      </div>
     </header>
   );
 }
 
-/** A section heading inside a page. */
-export function SectionTitle({
-  children,
-  aside,
-  id,
-}: {
-  children: ReactNode;
-  aside?: ReactNode;
-  id?: string;
-}) {
-  return (
-    <div className="mb-3 flex items-baseline justify-between gap-4">
-      <h2 id={id} className="font-serif text-xl font-semibold">
-        {children}
-      </h2>
-      {aside && <div className="text-sm text-ink-3">{aside}</div>}
-    </div>
-  );
-}
+/* -------------------------------------------------------------------- Forms */
 
 interface FieldProps {
   label: string;
@@ -193,11 +239,15 @@ interface FieldProps {
   hint?: string;
 }
 
-const fieldClass = (error?: string) =>
+const fieldClass = (error?: string, width = 'block w-full') =>
   cx(
-    'block w-full rounded border bg-paper-raised px-3 text-[15px] text-ink placeholder:text-ink-3',
-    'focus:border-ink focus:outline-none focus-visible:outline-none',
-    error ? 'border-incorrect' : 'border-rule-strong',
+    width,
+    'rounded-md border bg-white px-3 text-sm text-gray-900 shadow-xs placeholder:text-gray-400',
+    'focus:outline-none focus:ring-4',
+    error
+      ? 'border-danger-500 focus:border-danger-500 focus:ring-danger-100'
+      : 'border-gray-300 focus:border-brand-600 focus:ring-brand-100',
+    'disabled:bg-gray-50 disabled:text-gray-500',
   );
 
 function FieldShell({
@@ -210,16 +260,16 @@ function FieldShell({
 }: FieldProps & { id: string; className?: string; children: ReactNode }) {
   return (
     <div className={className}>
-      <label htmlFor={id} className="mb-1.5 block text-sm font-medium text-ink">
+      <label htmlFor={id} className="mb-1.5 block text-sm font-medium text-gray-700">
         {label}
       </label>
       {children}
       {error ? (
-        <p id={`${id}-error`} className="mt-1.5 text-sm text-incorrect">
+        <p id={`${id}-error`} className="mt-1.5 text-sm text-danger-600">
           {error}
         </p>
       ) : hint ? (
-        <p id={`${id}-hint`} className="mt-1.5 text-sm text-ink-3">
+        <p id={`${id}-hint`} className="mt-1.5 text-sm text-gray-500">
           {hint}
         </p>
       ) : null}
@@ -297,189 +347,206 @@ export function Select({
   );
 }
 
-type Tone = 'neutral' | 'pencil' | 'right' | 'wrong';
-const tagTones: Record<Tone, string> = {
-  neutral: 'border-rule-strong text-ink-2',
-  pencil: 'border-pencil bg-pencil-soft text-pencil-deep',
-  right: 'border-correct/30 bg-correct-soft text-correct',
-  wrong: 'border-incorrect/30 bg-incorrect-soft text-incorrect',
+/** A search box with a leading icon, for table toolbars. Labelled for screen readers. */
+export function SearchInput({
+  value,
+  onChange,
+  placeholder,
+  label,
+  className,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  label: string;
+  className?: string;
+}) {
+  return (
+    <div className={cx('relative', className)}>
+      <Search
+        className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
+        aria-hidden="true"
+      />
+      <input
+        type="search"
+        aria-label={label}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className={cx(fieldClass(), 'h-9 pl-9')}
+      />
+    </div>
+  );
+}
+
+/** A compact filter dropdown for toolbars (label is visually hidden). */
+export function FilterSelect({
+  label,
+  className,
+  children,
+  ...rest
+}: SelectHTMLAttributes<HTMLSelectElement> & { label: string }) {
+  return (
+    <select
+      aria-label={label}
+      className={cx(fieldClass(undefined, 'inline-block w-auto'), 'h-9 pr-8', className)}
+      {...rest}
+    >
+      {children}
+    </select>
+  );
+}
+
+/* ------------------------------------------------------------ Status & data */
+
+type Tone = 'neutral' | 'brand' | 'success' | 'danger' | 'warning';
+const badgeTones: Record<Tone, string> = {
+  neutral: 'bg-gray-100 text-gray-700',
+  brand: 'bg-brand-50 text-brand-700',
+  success: 'bg-success-50 text-success-700',
+  danger: 'bg-danger-50 text-danger-700',
+  warning: 'bg-warning-50 text-warning-700',
 };
 
-/** A small square-cornered label, like a stamp in a margin. Use sparingly. */
-export function Tag({ tone = 'neutral', children }: { tone?: Tone; children: ReactNode }) {
+export function Badge({
+  tone = 'neutral',
+  icon: Icon,
+  children,
+}: {
+  tone?: Tone;
+  icon?: LucideIcon;
+  children: ReactNode;
+}) {
   return (
     <span
       className={cx(
-        'inline-flex items-center whitespace-nowrap rounded-sm border px-1.5 py-px text-xs font-medium',
-        tagTones[tone],
+        'inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium',
+        badgeTones[tone],
       )}
     >
+      {Icon && <Icon className="h-3 w-3" aria-hidden="true" />}
       {children}
     </span>
   );
 }
 
-/** Inline status text with a coloured dot. Lighter than a Tag for table cells. */
-export function Status({ tone, children }: { tone: Tone; children: ReactNode }) {
-  const dot = {
-    neutral: 'bg-ink-4',
-    pencil: 'bg-pencil',
-    right: 'bg-correct',
-    wrong: 'bg-incorrect',
-  }[tone];
-  const text = {
-    neutral: 'text-ink-2',
-    pencil: 'text-pencil-deep',
-    right: 'text-correct',
-    wrong: 'text-incorrect',
-  }[tone];
-  return (
-    <span className={cx('inline-flex items-center gap-1.5 whitespace-nowrap text-sm', text)}>
-      <span className={cx('h-1.5 w-1.5 rounded-full', dot)} aria-hidden="true" />
-      {children}
-    </span>
-  );
-}
+const avatarColors = [
+  'bg-brand-100 text-brand-700',
+  'bg-success-100 text-success-700',
+  'bg-warning-100 text-warning-700',
+  'bg-danger-100 text-danger-700',
+  'bg-gray-200 text-gray-700',
+];
 
-export function Skeleton({ className }: { className?: string }) {
+/** Initials in a coloured circle; the colour is derived from the name so it stays stable. */
+export function Avatar({ name, size = 'md' }: { name: string; size?: 'sm' | 'md' | 'lg' }) {
+  const initials = name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase())
+    .join('');
+  const color =
+    avatarColors[[...name].reduce((n, c) => n + c.charCodeAt(0), 0) % avatarColors.length];
   return (
-    <div
-      className={cx('animate-pulse rounded bg-paper-sunken', className ?? 'h-5 w-full')}
+    <span
       aria-hidden="true"
-    />
-  );
-}
-
-/** Loading placeholder for a page section; announced once to screen readers. */
-export function LoadingBlock({ rows = 3, label = 'Loading' }: { rows?: number; label?: string }) {
-  return (
-    <div role="status" aria-label={label} className="space-y-2">
-      {Array.from({ length: rows }, (_, i) => (
-        <Skeleton key={i} className={i === 0 ? 'h-16 w-full' : 'h-10 w-full'} />
-      ))}
-      <span className="sr-only">{label}…</span>
-    </div>
-  );
-}
-
-export function EmptyState({
-  title,
-  description,
-  action,
-}: {
-  title: string;
-  description?: ReactNode;
-  action?: ReactNode;
-}) {
-  return (
-    <div className="rounded border border-dashed border-rule-strong px-6 py-10 text-center">
-      <p className="font-medium">{title}</p>
-      {description && <p className="mx-auto mt-1 max-w-md text-sm text-ink-2">{description}</p>}
-      {action && <div className="mt-5 flex justify-center">{action}</div>}
-    </div>
-  );
-}
-
-/** A friendly error with a retry, never raw error text (NFR-2). */
-export function ErrorState({ error, onRetry }: { error: unknown; onRetry?: () => void }) {
-  return (
-    <div role="alert" className="rounded border border-incorrect/30 bg-incorrect-soft px-5 py-4">
-      <p className="font-medium text-incorrect">This didn’t load.</p>
-      <p className="mt-0.5 text-sm text-incorrect">{errorMessage(error)}</p>
-      {onRetry && (
-        <Button variant="secondary" size="sm" className="mt-3" onClick={onRetry}>
-          Try again
-        </Button>
+      className={cx(
+        'inline-flex shrink-0 items-center justify-center rounded-full font-semibold',
+        size === 'sm' && 'h-7 w-7 text-xs',
+        size === 'md' && 'h-8 w-8 text-xs',
+        size === 'lg' && 'h-10 w-10 text-sm',
+        color,
       )}
-    </div>
+    >
+      {initials}
+    </span>
   );
 }
 
-/** A notice bar with a coloured left rule, like a margin note. */
-export function Alert({
-  tone,
-  children,
+export function StatCard({
+  label,
+  value,
+  icon: Icon,
+  hint,
+  tone = 'brand',
 }: {
-  tone: 'right' | 'wrong' | 'pencil';
-  children: ReactNode;
+  label: string;
+  value: ReactNode;
+  icon: LucideIcon;
+  hint?: ReactNode;
+  tone?: 'brand' | 'success' | 'warning' | 'danger';
 }) {
-  const cls = {
-    right: 'border-correct bg-correct-soft text-correct',
-    wrong: 'border-incorrect bg-incorrect-soft text-incorrect',
-    pencil: 'border-pencil bg-pencil-soft text-pencil-deep',
+  const chip = {
+    brand: 'bg-brand-50 text-brand-600',
+    success: 'bg-success-50 text-success-600',
+    warning: 'bg-warning-50 text-warning-600',
+    danger: 'bg-danger-50 text-danger-600',
   }[tone];
   return (
-    <div
-      role={tone === 'wrong' ? 'alert' : 'status'}
-      className={cx('rounded-sm border-l-[3px] px-3 py-2 text-sm', cls)}
-    >
-      {children}
-    </div>
-  );
-}
-
-/** One row of figures divided by rules, instead of a grid of identical stat boxes. */
-export function StatStrip({
-  items,
-}: {
-  items: { label: string; value: ReactNode; note?: ReactNode }[];
-}) {
-  return (
-    <dl className="grid grid-cols-2 border-y border-rule sm:flex sm:divide-x sm:divide-rule">
-      {items.map((s, i) => (
-        <div
-          key={s.label}
-          className={cx(
-            'px-0 py-4 sm:flex-1 sm:px-6 sm:first:pl-0',
-            i % 2 === 1 && 'pl-4 max-sm:border-l max-sm:border-rule',
-            i >= 2 && 'max-sm:border-t max-sm:border-rule',
-          )}
-        >
-          <dt className="eyebrow">{s.label}</dt>
-          <dd className="mt-1 font-mono text-2xl font-medium tabular-nums tracking-tight">
-            {s.value}
-          </dd>
-          {s.note && <dd className="mt-0.5 text-xs text-ink-3">{s.note}</dd>}
+    <Card className="p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm text-gray-500">{label}</p>
+          <p className="mt-1 text-2xl font-semibold tabular text-gray-900">{value}</p>
         </div>
-      ))}
-    </dl>
+        <span className={cx('flex h-9 w-9 shrink-0 items-center justify-center rounded-lg', chip)}>
+          <Icon className="h-[18px] w-[18px]" aria-hidden="true" />
+        </span>
+      </div>
+      {hint && <p className="mt-2 text-xs text-gray-500">{hint}</p>}
+    </Card>
   );
 }
 
-/** A thin progress bar with an accessible value. */
-export function Meter({
+/** A progress bar with an accessible value. */
+export function ProgressBar({
   value,
   label,
-  tone = 'ink',
+  tone = 'brand',
+  size = 'md',
   className,
 }: {
   value: number;
   label: string;
-  tone?: 'ink' | 'pencil' | 'right' | 'wrong';
+  tone?: 'brand' | 'success' | 'warning' | 'danger';
+  size?: 'sm' | 'md';
   className?: string;
 }) {
-  const color = { ink: 'bg-ink', pencil: 'bg-pencil', right: 'bg-correct', wrong: 'bg-incorrect' }[
-    tone
-  ];
+  const color = {
+    brand: 'bg-brand-600',
+    success: 'bg-success-500',
+    warning: 'bg-warning-500',
+    danger: 'bg-danger-500',
+  }[tone];
   const pctValue = Math.round(Math.max(0, Math.min(1, value)) * 100);
   return (
     <div
-      role="meter"
+      role="progressbar"
       aria-label={label}
       aria-valuemin={0}
       aria-valuemax={100}
       aria-valuenow={pctValue}
-      className={cx('h-1.5 w-full overflow-hidden rounded-full bg-paper-sunken', className)}
+      className={cx(
+        'w-full overflow-hidden rounded-full bg-gray-100',
+        size === 'sm' ? 'h-1.5' : 'h-2',
+        className,
+      )}
     >
-      <div className={cx('h-full rounded-full', color)} style={{ width: `${pctValue}%` }} />
+      <div
+        className={cx('h-full rounded-full transition-[width] duration-300', color)}
+        style={{ width: `${pctValue}%` }}
+      />
     </div>
   );
 }
 
+/* ------------------------------------------------------------------- Tables */
+
 /** Scrolls sideways on small screens so the page itself never does (NFR-4). */
 export function TableWrap({
   children,
-  minWidth = 560,
+  minWidth = 640,
 }: {
   children: ReactNode;
   minWidth?: number;
@@ -499,15 +566,65 @@ export function Th({ children, className }: { children?: ReactNode; className?: 
   return (
     <th
       scope="col"
-      className={cx('eyebrow border-b border-rule px-5 py-2.5 font-normal first:pl-5', className)}
+      className={cx(
+        'border-b border-gray-200 bg-gray-50 px-5 py-2.5 text-xs font-medium text-gray-500',
+        className,
+      )}
     >
       {children}
     </th>
   );
 }
 
+export type SortDir = 'asc' | 'desc';
+
+/** A column header that sorts when clicked. */
+export function SortTh({
+  children,
+  active,
+  dir,
+  onSort,
+  align = 'left',
+  className,
+}: {
+  children: ReactNode;
+  active: boolean;
+  dir: SortDir;
+  onSort: () => void;
+  align?: 'left' | 'right';
+  className?: string;
+}) {
+  const Icon = !active ? ChevronsUpDown : dir === 'asc' ? ArrowUp : ArrowDown;
+  return (
+    <th
+      scope="col"
+      aria-sort={active ? (dir === 'asc' ? 'ascending' : 'descending') : 'none'}
+      className={cx(
+        'border-b border-gray-200 bg-gray-50 px-5 py-2.5 text-xs font-medium text-gray-500',
+        align === 'right' && 'text-right',
+        className,
+      )}
+    >
+      <button
+        type="button"
+        onClick={onSort}
+        className={cx(
+          'flex items-center gap-1 rounded hover:text-gray-900',
+          active && 'text-gray-900',
+          align === 'right' && 'ml-auto flex-row-reverse',
+        )}
+      >
+        {children}
+        <Icon className={cx('h-3.5 w-3.5', !active && 'text-gray-400')} aria-hidden="true" />
+      </button>
+    </th>
+  );
+}
+
 export function Td({ children, className }: { children?: ReactNode; className?: string }) {
-  return <td className={cx('border-b border-rule px-5 py-3 align-top', className)}>{children}</td>;
+  return (
+    <td className={cx('border-b border-gray-100 px-5 py-3 align-middle', className)}>{children}</td>
+  );
 }
 
 export function Pager({
@@ -528,10 +645,10 @@ export function Pager({
   return (
     <nav
       aria-label="Pagination"
-      className="flex items-center justify-between px-5 py-3 text-sm text-ink-3"
+      className="flex items-center justify-between border-t border-gray-200 px-5 py-3 text-sm text-gray-500"
     >
-      <span className="font-mono text-xs">
-        {from}–{to} of {total}
+      <span className="tabular">
+        Showing {from}–{to} of {total}
       </span>
       <div className="flex gap-2">
         <Button variant="secondary" size="sm" disabled={page <= 1} onClick={() => onPage(page - 1)}>
@@ -550,30 +667,170 @@ export function Pager({
   );
 }
 
-/** A dialog that traps nothing fancy but restores focus and closes on Escape. */
+/** Tabs for switching between views of the same page. */
+export function Tabs<T extends string>({
+  tabs,
+  value,
+  onChange,
+}: {
+  tabs: { id: T; label: string; count?: number }[];
+  value: T;
+  onChange: (id: T) => void;
+}) {
+  const baseId = useId();
+  return (
+    <div role="tablist" aria-label="Sections" className="mb-6 flex gap-6 border-b border-gray-200">
+      {tabs.map((t) => {
+        const active = t.id === value;
+        return (
+          <button
+            key={t.id}
+            role="tab"
+            id={`${baseId}-${t.id}`}
+            aria-selected={active}
+            onClick={() => onChange(t.id)}
+            className={cx(
+              '-mb-px flex items-center gap-2 border-b-2 pb-3 text-sm font-medium transition-colors',
+              active
+                ? 'border-brand-600 text-brand-700'
+                : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700',
+            )}
+          >
+            {t.label}
+            {t.count !== undefined && (
+              <span
+                className={cx(
+                  'rounded-full px-1.5 py-px text-xs tabular',
+                  active ? 'bg-brand-50 text-brand-700' : 'bg-gray-100 text-gray-600',
+                )}
+              >
+                {t.count}
+              </span>
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ----------------------------------------------------------------- Feedback */
+
+export function Skeleton({ className }: { className?: string }) {
+  return (
+    <div
+      className={cx('animate-pulse rounded-md bg-gray-100', className ?? 'h-5 w-full')}
+      aria-hidden="true"
+    />
+  );
+}
+
+/** Loading placeholder for a page section; announced once to screen readers. */
+export function LoadingBlock({ rows = 3, label = 'Loading' }: { rows?: number; label?: string }) {
+  return (
+    <div role="status" aria-label={label} className="space-y-3">
+      {Array.from({ length: rows }, (_, i) => (
+        <Skeleton key={i} className={i === 0 ? 'h-20 w-full' : 'h-12 w-full'} />
+      ))}
+      <span className="sr-only">{label}…</span>
+    </div>
+  );
+}
+
+export function EmptyState({
+  icon: Icon,
+  title,
+  description,
+  action,
+}: {
+  icon?: LucideIcon;
+  title: string;
+  description?: ReactNode;
+  action?: ReactNode;
+}) {
+  return (
+    <div className="flex flex-col items-center px-6 py-12 text-center">
+      {Icon && (
+        <span className="mb-4 flex h-11 w-11 items-center justify-center rounded-full bg-gray-100 text-gray-500">
+          <Icon className="h-5 w-5" aria-hidden="true" />
+        </span>
+      )}
+      <p className="font-semibold text-gray-900">{title}</p>
+      {description && <p className="mt-1 max-w-sm text-gray-500">{description}</p>}
+      {action && <div className="mt-5">{action}</div>}
+    </div>
+  );
+}
+
+/** A friendly error with a retry, never raw error text (NFR-2). */
+export function ErrorState({ error, onRetry }: { error: unknown; onRetry?: () => void }) {
+  return (
+    <div
+      role="alert"
+      className="flex flex-col items-center rounded-lg border border-danger-100 bg-danger-50 px-6 py-8 text-center"
+    >
+      <CircleAlert className="mb-2 h-6 w-6 text-danger-600" aria-hidden="true" />
+      <p className="font-semibold text-danger-700">This didn’t load</p>
+      <p className="mt-0.5 text-danger-700">{errorMessage(error)}</p>
+      {onRetry && (
+        <Button variant="secondary" size="sm" className="mt-4" onClick={onRetry}>
+          Try again
+        </Button>
+      )}
+    </div>
+  );
+}
+
+const alertStyles = {
+  success: { box: 'border-success-100 bg-success-50 text-success-700', icon: CircleCheck },
+  danger: { box: 'border-danger-100 bg-danger-50 text-danger-700', icon: CircleAlert },
+  warning: { box: 'border-warning-100 bg-warning-50 text-warning-700', icon: TriangleAlert },
+  info: { box: 'border-brand-100 bg-brand-50 text-brand-700', icon: Info },
+} as const;
+
+export function Alert({ tone, children }: { tone: keyof typeof alertStyles; children: ReactNode }) {
+  const { box, icon: Icon } = alertStyles[tone];
+  return (
+    <div
+      role={tone === 'danger' ? 'alert' : 'status'}
+      className={cx('flex items-start gap-2.5 rounded-md border px-3 py-2.5 text-sm', box)}
+    >
+      <Icon className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+      <div className="min-w-0">{children}</div>
+    </div>
+  );
+}
+
+/** A dialog that restores focus and closes on Escape or a click outside. */
 export function Modal({
   title,
+  description,
   open,
   onClose,
   children,
+  size = 'md',
 }: {
   title: string;
+  description?: string;
   open: boolean;
   onClose: () => void;
   children: ReactNode;
+  size?: 'md' | 'lg';
 }) {
   const titleId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!open) return;
     const previous = document.activeElement as HTMLElement | null;
-    dialogRef.current?.querySelector<HTMLElement>('input, select, textarea, button')?.focus();
+    dialogRef.current
+      ?.querySelector<HTMLElement>('input, select, textarea, button:not([aria-label="Close"])')
+      ?.focus();
     return () => previous?.focus();
   }, [open]);
   if (!open) return null;
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-ink/30 p-4 sm:items-center"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-gray-900/50 p-4 sm:items-center"
       onKeyDown={(e) => e.key === 'Escape' && onClose()}
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
     >
@@ -582,39 +839,43 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-md border border-rule bg-paper-raised shadow-pop"
+        className={cx(
+          'max-h-[90vh] w-full overflow-y-auto rounded-xl bg-white shadow-lg',
+          size === 'lg' ? 'max-w-2xl' : 'max-w-lg',
+        )}
       >
-        <div className="flex items-center justify-between gap-4 border-b border-rule px-6 py-4">
-          <h2 id={titleId} className="font-serif text-lg font-semibold">
-            {title}
-          </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="-mr-2 rounded p-1.5 text-ink-3 hover:bg-paper-sunken hover:text-ink"
-            aria-label="Close"
-          >
-            <svg viewBox="0 0 20 20" className="h-4 w-4" aria-hidden="true">
-              <path
-                d="M5 5l10 10M15 5L5 15"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-              />
-            </svg>
-          </button>
+        <div className="flex items-start justify-between gap-4 px-6 pt-5">
+          <div>
+            <h2 id={titleId} className="text-lg font-semibold text-gray-900">
+              {title}
+            </h2>
+            {description && <p className="mt-1 text-sm text-gray-500">{description}</p>}
+          </div>
+          <IconButton icon={X} label="Close" onClick={onClose} className="-mr-2 -mt-1" />
         </div>
-        <div className="px-6 py-5">{children}</div>
+        <div className="px-6 pb-6 pt-4">{children}</div>
       </div>
     </div>
   );
 }
 
-/** Join codes and other short codes, set in mono with a dotted rule. */
+/** Join codes and other short codes. */
 export function Code({ children }: { children: ReactNode }) {
   return (
-    <span className="rounded-sm border border-dashed border-rule-strong bg-paper px-1.5 py-0.5 font-mono text-sm font-medium tracking-wider">
+    <span className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[13px] font-medium tracking-wide text-gray-700">
       {children}
     </span>
   );
+}
+
+/** Client-side sorting helper for tables whose rows are all loaded. */
+export function sortRows<T>(rows: T[], key: (r: T) => string | number, dir: SortDir): T[] {
+  const sorted = [...rows].sort((a, b) => {
+    const x = key(a);
+    const y = key(b);
+    return typeof x === 'string' && typeof y === 'string'
+      ? x.localeCompare(y)
+      : Number(x) - Number(y);
+  });
+  return dir === 'asc' ? sorted : sorted.reverse();
 }

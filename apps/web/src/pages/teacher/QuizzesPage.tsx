@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { ClipboardList, Plus, Send } from 'lucide-react';
 import type {
   ClassDto,
   ClassSummaryDto,
@@ -10,21 +11,22 @@ import type {
 } from '@learnloop/shared';
 import {
   Alert,
+  Badge,
   Button,
+  Card,
   EmptyState,
   ErrorState,
   Input,
   LoadingBlock,
   Modal,
   PageHeader,
-  Panel,
   Select,
-  Status,
   TableWrap,
   Td,
   Th,
   cx,
 } from '../../components/ui';
+import { useToast } from '../../components/toast';
 import { api, errorMessage, qs } from '../../lib/api';
 import { useUser } from '../../lib/auth';
 import { shortDate } from '../../lib/format';
@@ -39,11 +41,14 @@ export default function QuizzesPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Teaching"
         title="Quizzes"
-        subtitle="A fixed set of approved questions, served in your order. Assign one to a class or to chosen students."
+        description="Build a quiz from approved questions, then assign it to a class or to selected students."
         actions={
-          user.role === 'teacher' && <Button onClick={() => setBuilding(true)}>New quiz</Button>
+          user.role === 'teacher' && (
+            <Button icon={Plus} onClick={() => setBuilding(true)}>
+              New quiz
+            </Button>
+          )
         }
       />
       {q.isError ? (
@@ -51,17 +56,24 @@ export default function QuizzesPage() {
       ) : q.isPending ? (
         <LoadingBlock />
       ) : q.data.length === 0 ? (
-        <EmptyState
-          title="No quizzes yet"
-          description="Pick questions from the bank to build your first one."
-          action={<Button onClick={() => setBuilding(true)}>Build a quiz</Button>}
-        />
+        <Card>
+          <EmptyState
+            icon={ClipboardList}
+            title="No quizzes yet"
+            description="Pick questions from the bank to build your first quiz."
+            action={
+              <Button icon={Plus} onClick={() => setBuilding(true)}>
+                Build a quiz
+              </Button>
+            }
+          />
+        </Card>
       ) : (
-        <Panel>
+        <Card>
           <TableWrap>
             <thead>
               <tr>
-                <Th>Title</Th>
+                <Th>Quiz</Th>
                 <Th>Topic</Th>
                 <Th className="text-right">Questions</Th>
                 <Th>Created</Th>
@@ -73,20 +85,25 @@ export default function QuizzesPage() {
             </thead>
             <tbody>
               {q.data.map((quiz) => (
-                <tr key={quiz.id}>
-                  <Td className="font-medium">{quiz.title}</Td>
-                  <Td className="text-ink-2">{quiz.topicName}</Td>
-                  <Td className="text-right font-mono">{quiz.questionCount}</Td>
-                  <Td className="font-mono text-xs text-ink-3">{shortDate(quiz.createdAt)}</Td>
+                <tr key={quiz.id} className="hover:bg-gray-50">
+                  <Td className="font-medium text-gray-900">{quiz.title}</Td>
+                  <Td className="text-gray-600">{quiz.topicName}</Td>
+                  <Td className="text-right tabular">{quiz.questionCount}</Td>
+                  <Td className="whitespace-nowrap text-gray-600">{shortDate(quiz.createdAt)}</Td>
                   <Td>
-                    <Status tone={quiz.status === 'published' ? 'right' : 'pencil'}>
-                      {quiz.status}
-                    </Status>
+                    <Badge tone={quiz.status === 'published' ? 'success' : 'warning'}>
+                      {quiz.status === 'published' ? 'Published' : 'Draft'}
+                    </Badge>
                   </Td>
                   <Td className="text-right">
                     {user.role === 'teacher' && (
-                      <Button variant="secondary" size="sm" onClick={() => setAssigning(quiz)}>
-                        Assign…
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        icon={Send}
+                        onClick={() => setAssigning(quiz)}
+                      >
+                        Assign
                       </Button>
                     )}
                   </Td>
@@ -94,7 +111,7 @@ export default function QuizzesPage() {
               ))}
             </tbody>
           </TableWrap>
-        </Panel>
+        </Card>
       )}
       <QuizBuilder open={building} onClose={() => setBuilding(false)} />
       {assigning && <AssignModal quiz={assigning} onClose={() => setAssigning(null)} />}
@@ -104,6 +121,7 @@ export default function QuizzesPage() {
 
 function QuizBuilder({ open, onClose }: { open: boolean; onClose: () => void }) {
   const qc = useQueryClient();
+  const toast = useToast();
   const [title, setTitle] = useState('');
   const [topicId, setTopicId] = useState('');
   const [picked, setPicked] = useState<string[]>([]);
@@ -124,6 +142,7 @@ function QuizBuilder({ open, onClose }: { open: boolean; onClose: () => void }) 
     mutationFn: () => api.post<QuizDto>('/quizzes', { title, topicId, questionIds: picked }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['quizzes'] });
+      toast.success('Quiz created');
       setTitle('');
       setPicked([]);
       onClose();
@@ -137,66 +156,78 @@ function QuizBuilder({ open, onClose }: { open: boolean; onClose: () => void }) 
   };
 
   return (
-    <Modal title="New quiz" open={open} onClose={onClose}>
+    <Modal
+      title="New quiz"
+      description="Students answer the questions in the order you pick them."
+      open={open}
+      onClose={onClose}
+      size="lg"
+    >
       <form className="space-y-4" onSubmit={onSubmit}>
-        <Input
-          label="Title"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          maxLength={120}
-          placeholder="Fractions check-in"
-        />
-        <Select
-          label="Topic"
-          value={topicId}
-          onChange={(e) => {
-            setTopicId(e.target.value);
-            setPicked([]);
-          }}
-        >
-          <option value="">Choose a topic…</option>
-          {topics.data?.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.name}
-            </option>
-          ))}
-        </Select>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Input
+            label="Title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            maxLength={120}
+            placeholder="e.g. Fractions check-in"
+          />
+          <Select
+            label="Topic"
+            value={topicId}
+            onChange={(e) => {
+              setTopicId(e.target.value);
+              setPicked([]);
+            }}
+          >
+            <option value="">Select a topic</option>
+            {topics.data?.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </Select>
+        </div>
         {topicId && (
           <fieldset>
-            <legend className="mb-1.5 flex w-full justify-between text-sm font-medium">
+            <legend className="mb-1.5 flex w-full items-baseline justify-between text-sm font-medium text-gray-700">
               Questions
-              <span className="font-mono text-xs font-normal text-ink-3">
-                {picked.length} picked · order = click order
-              </span>
+              <span className="font-normal text-gray-500">{picked.length} selected</span>
             </legend>
             {questions.isPending ? (
               <LoadingBlock rows={2} />
             ) : questions.isError ? (
               <ErrorState error={questions.error} onRetry={() => void questions.refetch()} />
             ) : questions.data.items.length === 0 ? (
-              <p className="text-sm text-ink-3">No approved questions in this topic yet.</p>
+              <p className="rounded-md border border-dashed border-gray-300 px-4 py-6 text-center text-gray-500">
+                No approved questions in this topic yet.
+              </p>
             ) : (
-              <ul className="max-h-72 divide-y divide-rule overflow-y-auto rounded border border-rule-strong">
+              <ul className="max-h-72 divide-y divide-gray-100 overflow-y-auto rounded-md border border-gray-200">
                 {questions.data.items.map((q) => {
                   const pos = picked.indexOf(q.id);
                   return (
                     <li key={q.id}>
                       <label
                         className={cx(
-                          'flex cursor-pointer items-start gap-3 px-3 py-2.5 text-sm',
-                          pos >= 0 ? 'bg-pencil-soft' : 'hover:bg-paper',
+                          'flex cursor-pointer items-start gap-3 px-3 py-2.5',
+                          pos >= 0 ? 'bg-brand-50' : 'hover:bg-gray-50',
                         )}
                       >
                         <input
                           type="checkbox"
                           checked={pos >= 0}
                           onChange={() => toggle(q.id)}
-                          className="mt-1 h-4 w-4 accent-ink"
+                          className="mt-0.5 h-4 w-4 rounded border-gray-300 accent-brand-600"
                         />
-                        <span className="flex-1">{q.body}</span>
-                        <span className="w-10 shrink-0 text-right font-mono text-xs text-ink-3">
-                          {pos >= 0 ? `#${pos + 1}` : `L${q.difficulty}`}
-                        </span>
+                        <span className="flex-1 text-gray-900">{q.body}</span>
+                        {pos >= 0 ? (
+                          <Badge tone="brand">#{pos + 1}</Badge>
+                        ) : (
+                          <span className="shrink-0 text-xs text-gray-500">
+                            Level {q.difficulty}
+                          </span>
+                        )}
                       </label>
                     </li>
                   );
@@ -205,9 +236,9 @@ function QuizBuilder({ open, onClose }: { open: boolean; onClose: () => void }) 
             )}
           </fieldset>
         )}
-        {create.isError && <Alert tone="wrong">{errorMessage(create.error)}</Alert>}
+        {create.isError && <Alert tone="danger">{errorMessage(create.error)}</Alert>}
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="quiet" onClick={onClose}>
+          <Button type="button" variant="secondary" onClick={onClose}>
             Cancel
           </Button>
           <Button
@@ -232,6 +263,7 @@ function defaultDue(): string {
 
 function AssignModal({ quiz, onClose }: { quiz: QuizDto; onClose: () => void }) {
   const qc = useQueryClient();
+  const toast = useToast();
   const [classId, setClassId] = useState('');
   const [dueAt, setDueAt] = useState(defaultDue);
   const [everyone, setEveryone] = useState(true);
@@ -252,115 +284,107 @@ function AssignModal({ quiz, onClose }: { quiz: QuizDto; onClose: () => void }) 
         dueAt: new Date(dueAt).toISOString(),
         ...(everyone ? {} : { studentIds: students }),
       }),
-    onSuccess: () => {
+    onSuccess: (r) => {
       void qc.invalidateQueries({ queryKey: ['class-summary'] });
       void qc.invalidateQueries({ queryKey: ['assignments'] });
+      toast.success(`Assigned to ${r.studentCount} student${r.studentCount === 1 ? '' : 's'}`);
+      onClose();
     },
   });
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
     assign.mutate();
   };
-  const radio = 'flex items-start gap-2.5 text-sm';
+  const radio =
+    'flex cursor-pointer items-start gap-3 rounded-md border border-gray-200 p-3 has-[:checked]:border-brand-600 has-[:checked]:bg-brand-50';
 
   return (
-    <Modal title={`Assign “${quiz.title}”`} open onClose={onClose}>
-      {assign.isSuccess ? (
-        <>
-          <Alert tone="right">
-            Assigned to {assign.data.studentCount} student
-            {assign.data.studentCount === 1 ? '' : 's'}.
-          </Alert>
-          <div className="mt-4 flex justify-end">
-            <Button onClick={onClose}>Done</Button>
-          </div>
-        </>
-      ) : (
-        <form className="space-y-5" onSubmit={onSubmit}>
-          <Select label="Class" value={classId} onChange={(e) => setClassId(e.target.value)}>
-            <option value="">Choose a class…</option>
-            {classes.data
-              ?.filter((c) => !c.archived)
-              .map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name} ({c.studentCount})
-                </option>
-              ))}
-          </Select>
-          <Input
-            label="Due"
-            type="datetime-local"
-            value={dueAt}
-            onChange={(e) => setDueAt(e.target.value)}
-          />
-          <fieldset className="space-y-2">
-            <legend className="mb-1.5 text-sm font-medium">Who gets it</legend>
-            <label className={radio}>
-              <input
-                type="radio"
-                checked={everyone}
-                onChange={() => setEveryone(true)}
-                className="mt-1 accent-ink"
-              />
-              <span>
-                Whole class
-                <span className="block text-ink-3">Students who join later get it too.</span>
-              </span>
-            </label>
-            <label className={radio}>
-              <input
-                type="radio"
-                checked={!everyone}
-                onChange={() => setEveryone(false)}
-                className="mt-1 accent-ink"
-              />
-              <span>Selected students</span>
-            </label>
-          </fieldset>
-          {!everyone &&
-            classId &&
-            (roster.isPending ? (
-              <LoadingBlock rows={1} />
-            ) : roster.isError ? (
-              <ErrorState error={roster.error} />
-            ) : (
-              <ul className="max-h-48 divide-y divide-rule overflow-y-auto rounded border border-rule-strong">
-                {roster.data.students.map((s) => (
-                  <li key={s.studentId}>
-                    <label className="flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-paper">
-                      <input
-                        type="checkbox"
-                        className="accent-ink"
-                        checked={students.includes(s.studentId)}
-                        onChange={() =>
-                          setStudents((x) =>
-                            x.includes(s.studentId)
-                              ? x.filter((i) => i !== s.studentId)
-                              : [...x, s.studentId],
-                          )
-                        }
-                      />
-                      {s.displayName}
-                    </label>
-                  </li>
-                ))}
-              </ul>
+    <Modal title="Assign quiz" description={quiz.title} open onClose={onClose}>
+      <form className="space-y-4" onSubmit={onSubmit}>
+        <Select label="Class" value={classId} onChange={(e) => setClassId(e.target.value)}>
+          <option value="">Select a class</option>
+          {classes.data
+            ?.filter((c) => !c.archived)
+            .map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name} ({c.studentCount} students)
+              </option>
             ))}
-          {assign.isError && <Alert tone="wrong">{errorMessage(assign.error)}</Alert>}
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="quiet" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              loading={assign.isPending}
-              disabled={!classId || !dueAt || (!everyone && students.length === 0)}
-            >
-              Assign
-            </Button>
-          </div>
-        </form>
-      )}
+        </Select>
+        <Input
+          label="Due date"
+          type="datetime-local"
+          value={dueAt}
+          onChange={(e) => setDueAt(e.target.value)}
+        />
+        <fieldset className="space-y-2">
+          <legend className="mb-1.5 text-sm font-medium text-gray-700">Assign to</legend>
+          <label className={radio}>
+            <input
+              type="radio"
+              checked={everyone}
+              onChange={() => setEveryone(true)}
+              className="mt-0.5 accent-brand-600"
+            />
+            <span>
+              <span className="block font-medium text-gray-900">Whole class</span>
+              <span className="text-gray-500">Students who join later get it too.</span>
+            </span>
+          </label>
+          <label className={radio}>
+            <input
+              type="radio"
+              checked={!everyone}
+              onChange={() => setEveryone(false)}
+              className="mt-0.5 accent-brand-600"
+            />
+            <span className="font-medium text-gray-900">Selected students</span>
+          </label>
+        </fieldset>
+        {!everyone &&
+          classId &&
+          (roster.isPending ? (
+            <LoadingBlock rows={1} />
+          ) : roster.isError ? (
+            <ErrorState error={roster.error} />
+          ) : (
+            <ul className="max-h-48 divide-y divide-gray-100 overflow-y-auto rounded-md border border-gray-200">
+              {roster.data.students.map((s) => (
+                <li key={s.studentId}>
+                  <label className="flex cursor-pointer items-center gap-3 px-3 py-2 hover:bg-gray-50">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-gray-300 accent-brand-600"
+                      checked={students.includes(s.studentId)}
+                      onChange={() =>
+                        setStudents((x) =>
+                          x.includes(s.studentId)
+                            ? x.filter((i) => i !== s.studentId)
+                            : [...x, s.studentId],
+                        )
+                      }
+                    />
+                    {s.displayName}
+                  </label>
+                </li>
+              ))}
+            </ul>
+          ))}
+        {assign.isError && <Alert tone="danger">{errorMessage(assign.error)}</Alert>}
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            icon={Send}
+            loading={assign.isPending}
+            disabled={!classId || !dueAt || (!everyone && students.length === 0)}
+          >
+            Assign quiz
+          </Button>
+        </div>
+      </form>
     </Modal>
   );
 }

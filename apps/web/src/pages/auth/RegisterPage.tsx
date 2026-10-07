@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { GraduationCap, Users } from 'lucide-react';
 import { PASSWORD_MIN_LENGTH, registerSchema } from '@learnloop/shared';
 import { Alert, Button, Input, cx } from '../../components/ui';
 import { ApiRequestError, errorMessage } from '../../lib/api';
@@ -46,46 +47,52 @@ export function RegisterPage() {
   return (
     <AuthShell
       title="Create an account"
-      subtitle="Students practise; teachers set work and see results."
+      subtitle="Students practise. Teachers set work and see results."
       footer={
         <>
           Already have an account?{' '}
-          <Link className="link" to="/login">
+          <Link className="font-medium text-brand-700 hover:underline" to="/login">
             Log in
           </Link>
         </>
       }
     >
       <form className="space-y-4" onSubmit={onSubmit} noValidate>
-        {error && <Alert tone="wrong">{error}</Alert>}
+        {error && <Alert tone="danger">{error}</Alert>}
         <fieldset>
-          <legend className="mb-1.5 text-sm font-medium">I’m a</legend>
-          <div className="grid grid-cols-2 overflow-hidden rounded border border-rule-strong">
-            {(['student', 'teacher'] as const).map((r) => (
+          <legend className="mb-1.5 text-sm font-medium text-gray-700">I am a</legend>
+          <div className="grid grid-cols-2 gap-2">
+            {(
+              [
+                { value: 'student', label: 'Student', icon: GraduationCap },
+                { value: 'teacher', label: 'Teacher', icon: Users },
+              ] as const
+            ).map(({ value, label, icon: Icon }) => (
               <label
-                key={r}
+                key={value}
                 className={cx(
-                  'flex h-10 cursor-pointer items-center justify-center text-sm capitalize transition-colors first:border-r first:border-rule-strong has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:-outline-offset-2 has-[:focus-visible]:outline-ink',
-                  form.role === r
-                    ? 'bg-ink font-medium text-white'
-                    : 'bg-paper-raised text-ink-2 hover:bg-paper-sunken',
+                  'flex h-10 cursor-pointer items-center justify-center gap-2 rounded-md border text-sm font-medium transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-brand-600',
+                  form.role === value
+                    ? 'border-brand-600 bg-brand-50 text-brand-700'
+                    : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50',
                 )}
               >
                 <input
                   type="radio"
                   name="role"
-                  value={r}
-                  checked={form.role === r}
+                  value={value}
+                  checked={form.role === value}
                   onChange={set('role')}
                   className="sr-only"
                 />
-                {r}
+                <Icon className="h-4 w-4" aria-hidden="true" />
+                {label}
               </label>
             ))}
           </div>
         </fieldset>
         <Input
-          label="Name"
+          label="Full name"
           autoComplete="name"
           value={form.displayName}
           onChange={set('displayName')}
@@ -98,6 +105,7 @@ export function RegisterPage() {
           value={form.email}
           onChange={set('email')}
           error={errors.email}
+          placeholder="you@school.org"
         />
         <Input
           label="Password"
@@ -106,9 +114,9 @@ export function RegisterPage() {
           value={form.password}
           onChange={set('password')}
           error={errors.password}
-          hint={`At least ${PASSWORD_MIN_LENGTH} characters. A short phrase works well.`}
+          hint={`Must be at least ${PASSWORD_MIN_LENGTH} characters.`}
         />
-        <Button type="submit" className="w-full" loading={busy}>
+        <Button type="submit" size="lg" className="w-full" loading={busy}>
           Create account
         </Button>
       </form>

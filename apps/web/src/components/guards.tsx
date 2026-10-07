@@ -5,7 +5,7 @@ import { Spinner } from './ui';
 
 function FullPageSpinner() {
   return (
-    <div role="status" className="flex min-h-screen items-center justify-center text-ink-3">
+    <div role="status" className="flex min-h-screen items-center justify-center text-gray-400">
       <Spinner className="h-8 w-8" />
       <span className="sr-only">Loading…</span>
     </div>
