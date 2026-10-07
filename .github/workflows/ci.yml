@@ -88,14 +88,14 @@ jobs:
           docker build -f infra/web.Dockerfile -t learnloop-web:ci .
       # SEC-12: images are scanned before release; high and critical findings fail.
       - name: Trivy scan (api)
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: learnloop-api:ci
           severity: HIGH,CRITICAL
           ignore-unfixed: true
           exit-code: '1'
       - name: Trivy scan (web)
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: learnloop-web:ci
           severity: HIGH,CRITICAL
