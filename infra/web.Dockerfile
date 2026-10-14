@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 # OPS-1, SEC-12: build with Node, serve static files from an unprivileged nginx.
 
-FROM node:20-bookworm-slim AS build
+FROM node:26-bookworm-slim AS build
 WORKDIR /app
 COPY package.json package-lock.json tsconfig.base.json ./
 COPY packages/shared/package.json packages/shared/
